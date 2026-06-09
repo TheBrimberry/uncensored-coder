@@ -331,6 +331,86 @@ Se ti piace il progetto, lascia una ⭐ su GitHub!
 
 ---
 
+## 📈 Omniscient Trading Agent
+
+A multi-asset trading agent lives in the [`trading/`](trading/) package. It fuses
+the best ideas from the open-source trading ecosystem (**freqtrade, ccxt,
+backtrader, vectorbt, OpenBB, qlib, FinRL, pandas-ta, TradeLocker, MetaTrader5,
+Alpaca, Interactive Brokers** and more) into one reasoning engine driven by the
+local LLM.
+
+> ⚠️ **Honest by design.** No software can guarantee a market prediction.
+> Forecasts are *probabilistic* (direction probability + expected-move band +
+> confidence), never promises. This is analysis/education, not financial advice.
+
+### Capabilities
+
+- **Any symbol, any market** — Forex ("4X"), crypto, stocks, ETFs, indices, futures.
+- **Technical analysis** — EMA/SMA, RSI, MACD, Bollinger, ATR, Stochastic, Supertrend (pure-python, no hard deps).
+- **Strategy ensemble** — trend-following, mean-reversion, breakout, momentum, Supertrend, blended into a net bias.
+- **Probabilistic forecasting** — P(up), expected return band scaled by volatility & horizon, with confidence.
+- **Risk-managed plans** — ATR-normalized entry/stop/target, position sizing from your equity & risk %.
+- **News & events** — headline sentiment + macro/crypto catalyst calendar (FOMC, CPI, earnings, halvings, unlocks).
+- **Brokers** — uniform interface over **TradeLocker, MetaTrader5, ccxt, Alpaca** — **paper/dry-run by default**.
+- **Knowledge base** — queryable catalogue of real trading repos + strategy families + non-negotiable risk principles.
+
+### Usage
+
+```bash
+# Full LLM-narrated trading read (needs Ollama running)
+python trade.py BTC/USDT
+
+# Computed quantitative report only (works fully offline, no Ollama)
+python trade.py AAPL --no-llm
+
+# Intraday + custom forecast horizon + account sizing
+python trade.py EURUSD --timeframe 1h --forecast 10 --equity 25000 --risk 0.5
+
+# Ask a specific question
+python trade.py ETH/USDT -q "is this a good breakout entry?"
+
+# Interactive loop  (type 'SYMBOL ? question', 'kb crypto', or 'exit')
+python trade.py --interactive
+
+# Dump the trading knowledge base
+python trade.py --knowledge crypto
+```
+
+### Programmatic API
+
+```python
+from trading import TradingAgent
+
+agent = TradingAgent(account_equity=10_000, risk_pct=1.0)
+
+report = agent.analyze("BTC/USDT")     # deterministic, no LLM needed
+print(report.to_text())
+
+print(agent.forecast("AAPL").summary())          # probabilistic outlook
+print(agent.trade_plan("EURUSD").summary())      # risk-managed plan
+print(agent.ask("ETH/USDT", "swing or scalp?"))  # LLM-narrated read
+
+# Execution is PAPER by default; live needs live=True + real credentials.
+plan = agent.trade_plan("BTC/USDT")
+print(agent.execute_plan(plan, broker="paper"))
+```
+
+### Optional dependencies
+
+The agent runs offline out of the box using a synthetic-data fallback (clearly
+flagged). For **real** market data and execution, uncomment the relevant lines in
+[`requirements.txt`](requirements.txt) — e.g. `yfinance` (stocks/fx), `ccxt`
+(crypto), `MetaTrader5` / `tradelocker` / `alpaca-py` (brokers). Every
+integration degrades gracefully if its dependency or API key is absent.
+
+Run the tests (all offline, no keys required):
+
+```bash
+python -m pytest tests/test_trading.py -q
+```
+
+---
+
 ## 🔮 Roadmap
 
 - [ ] Interfaccia web (GUI)
