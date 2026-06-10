@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoinScope — Crypto Analytics & Screener Platform</title>
+  <meta name="description" content="Scan, analyze and trade 3,000+ cryptocurrencies. AI chart patterns, 150+ technical indicators, trading signals and a live market screener." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <!-- ===== Top nav ===== -->
+  <header class="nav" id="top">
+    <div class="container nav__inner">
+      <a class="brand" href="#top">
+        <span class="brand__mark">◈</span>
+        <span class="brand__name">CoinScope</span>
+      </a>
+      <nav class="nav__links">
+        <a href="#screener">Screener</a>
+        <a href="#patterns">Chart Patterns</a>
+        <a href="#signals">Trade Setups</a>
+        <a href="#copilot">AI Copilot</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
+      <div class="nav__actions">
+        <a class="btn btn--ghost" href="#screener">Log in</a>
+        <a class="btn btn--primary" href="#pricing">Get started free</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Market ticker ===== -->
+  <div class="ticker" id="ticker" aria-label="Live market ticker">
+    <div class="ticker__track" id="ticker-track"></div>
+  </div>
+
+  <!-- ===== Hero ===== -->
+  <section class="hero">
+    <div class="container hero__inner">
+      <div class="hero__copy">
+        <span class="pill">⚡ 150+ indicators · 26 AI chart patterns · 3,000+ coins</span>
+        <h1>The crypto analytics platform that finds <span class="grad">winning trades</span> for you.</h1>
+        <p class="hero__sub">
+          Scan thousands of cryptocurrencies with 120+ technical filters, get AI-detected
+          chart patterns in real time, and act on expert trade setups — all in one place.
+        </p>
+        <div class="hero__cta">
+          <a class="btn btn--primary btn--lg" href="#screener">Launch the screener</a>
+          <a class="btn btn--ghost btn--lg" href="#copilot">Try AI Copilot</a>
+        </div>
+        <div class="hero__stats">
+          <div><strong id="stat-coins">3,000+</strong><span>Coins tracked</span></div>
+          <div><strong>150+</strong><span>Indicators</span></div>
+          <div><strong>26</strong><span>AI patterns</span></div>
+          <div><strong>24/7</strong><span>Market scan</span></div>
+        </div>
+      </div>
+      <div class="hero__panel">
+        <div class="glass">
+          <div class="glass__head">
+            <span class="dot dot--g"></span><span class="dot dot--y"></span><span class="dot dot--r"></span>
+            <span class="glass__title">Top movers · 24h</span>
+          </div>
+          <ul class="movers" id="hero-movers">
+            <li class="movers__skeleton">Loading live market data…</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Features ===== -->
+  <section class="features container">
+    <div class="feature">
+      <div class="feature__ic">🔎</div>
+      <h3>Crypto Screener</h3>
+      <p>Filter 8,000+ coins with 120+ technical indicators — RSI, MACD, moving averages and more.</p>
+    </div>
+    <div class="feature">
+      <div class="feature__ic">📐</div>
+      <h3>AI Chart Patterns</h3>
+      <p>An engine that scans the market 24/7 and detects 26 classic patterns with price targets.</p>
+    </div>
+    <div class="feature">
+      <div class="feature__ic">🎯</div>
+      <h3>Trade Setups</h3>
+      <p>Expert setups with clear entry, stop-loss and take-profit levels on top cryptocurrencies.</p>
+    </div>
+    <div class="feature">
+      <div class="feature__ic">🤖</div>
+      <h3>AI Copilot</h3>
+      <p>Describe what you want in plain English and Copilot builds the screener filters for you.</p>
+    </div>
+  </section>
+
+  <!-- ===== Screener ===== -->
+  <section class="screener" id="screener">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Live Crypto Screener</h2>
+          <p class="muted">Real market data with on-the-fly RSI, trend and momentum signals. Click a column to sort.</p>
+        </div>
+        <div class="screener__status" id="data-status">Loading…</div>
+      </div>
+
+      <div class="toolbar">
+        <input class="input" id="search" type="search" placeholder="Search coin or symbol…" autocomplete="off" />
+        <select class="input" id="signal-filter" aria-label="Filter by signal">
+          <option value="">All signals</option>
+          <option value="Strong Buy">Strong Buy</option>
+          <option value="Buy">Buy</option>
+          <option value="Neutral">Neutral</option>
+          <option value="Sell">Sell</option>
+          <option value="Strong Sell">Strong Sell</option>
+        </select>
+        <select class="input" id="cap-filter" aria-label="Filter by market cap">
+          <option value="0">Any market cap</option>
+          <option value="10000000000">&gt; $10B</option>
+          <option value="1000000000">&gt; $1B</option>
+          <option value="100000000">&gt; $100M</option>
+        </select>
+        <select class="input" id="trend-filter" aria-label="Filter by trend">
+          <option value="">Any trend</option>
+          <option value="up">Uptrend (price &gt; SMA)</option>
+          <option value="down">Downtrend (price &lt; SMA)</option>
+        </select>
+        <button class="btn btn--ghost" id="refresh">↻ Refresh</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="grid" id="screener-table">
+          <thead>
+            <tr>
+              <th data-sort="rank" class="num">#</th>
+              <th data-sort="name">Coin</th>
+              <th data-sort="price" class="num">Price</th>
+              <th data-sort="ch1h" class="num">1h</th>
+              <th data-sort="ch24h" class="num">24h</th>
+              <th data-sort="ch7d" class="num">7d</th>
+              <th data-sort="rsi" class="num">RSI(14)</th>
+              <th data-sort="signal">Signal</th>
+              <th data-sort="pattern">Pattern</th>
+              <th data-sort="mcap" class="num">Market Cap</th>
+              <th>7d chart</th>
+            </tr>
+          </thead>
+          <tbody id="screener-body">
+            <tr><td colspan="11" class="loading">Fetching live market data…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Chart patterns ===== -->
+  <section class="patterns" id="patterns">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>AI-Detected Chart Patterns</h2>
+          <p class="muted">Our engine scans every timeframe and flags completed &amp; forming patterns automatically.</p>
+        </div>
+      </div>
+      <div class="patterns__grid" id="patterns-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== Trade setups / signals ===== -->
+  <section class="signals" id="signals">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Expert Trade Setups</h2>
+          <p class="muted">Curated setups with entry, stop-loss and targets — derived live from current market data.</p>
+        </div>
+      </div>
+      <div class="signals__grid" id="signals-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== AI Copilot ===== -->
+  <section class="copilot" id="copilot">
+    <div class="container copilot__inner">
+      <div class="copilot__copy">
+        <span class="pill">🤖 AI Copilot</span>
+        <h2>Just describe the trade you're looking for.</h2>
+        <p class="muted">Type a strategy in plain English — Copilot translates it into screener filters and surfaces matching coins instantly.</p>
+        <div class="copilot__chips">
+          <button class="chip" data-q="Strong buy coins above $1B market cap">Strong buy · &gt;$1B cap</button>
+          <button class="chip" data-q="Oversold coins with RSI below 35">Oversold · RSI &lt; 35</button>
+          <button class="chip" data-q="Uptrend coins up more than 5% in 24h">Uptrend · +5% 24h</button>
+        </div>
+      </div>
+      <div class="copilot__box">
+        <div class="copilot__log" id="copilot-log">
+          <div class="bubble bubble--bot">Hi 👋 Tell me what kind of setup you want and I'll filter the market for you.</div>
+        </div>
+        <form class="copilot__form" id="copilot-form">
+          <input class="input" id="copilot-input" placeholder="e.g. oversold large caps in an uptrend" autocomplete="off" />
+          <button class="btn btn--primary" type="submit">Ask</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Pricing ===== -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="section-head section-head--center">
+        <h2>Plans for every trader</h2>
+        <p class="muted">Start free. Upgrade when you're ready for deeper analytics.</p>
+      </div>
+      <div class="pricing__grid">
+        <div class="plan">
+          <h3>Starter</h3>
+          <div class="plan__price">$0<span>/mo</span></div>
+          <p class="muted">Get a feel for the platform.</p>
+          <ul>
+            <li>✓ Live market screener</li>
+            <li>✓ Basic indicators &amp; RSI</li>
+            <li>✓ AI Copilot (limited)</li>
+            <li>✓ Watchlist</li>
+          </ul>
+          <a class="btn btn--ghost btn--block" href="#screener">Start free</a>
+        </div>
+        <div class="plan plan--featured">
+          <div class="plan__badge">Most popular</div>
+          <h3>Pro</h3>
+          <div class="plan__price">$29<span>/mo</span></div>
+          <p class="muted">For active traders.</p>
+          <ul>
+            <li>✓ Everything in Starter</li>
+            <li>✓ 150+ indicators &amp; signals</li>
+            <li>✓ AI chart patterns</li>
+            <li>✓ Real-time alerts</li>
+            <li>✓ Trade setups</li>
+          </ul>
+          <a class="btn btn--primary btn--block" href="#screener">Go Pro</a>
+        </div>
+        <div class="plan">
+          <h3>Premium</h3>
+          <div class="plan__price">$79<span>/mo</span></div>
+          <p class="muted">For serious analysts.</p>
+          <ul>
+            <li>✓ Everything in Pro</li>
+            <li>✓ On-chain fundamentals</li>
+            <li>✓ Unlimited Copilot</li>
+            <li>✓ API access</li>
+            <li>✓ Priority support</li>
+          </ul>
+          <a class="btn btn--ghost btn--block" href="#screener">Go Premium</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div>
+        <a class="brand" href="#top"><span class="brand__mark">◈</span><span class="brand__name">CoinScope</span></a>
+        <p class="muted">Scan. Analyze. Trade.</p>
+      </div>
+      <div class="footer__cols">
+        <div><h4>Product</h4><a href="#screener">Screener</a><a href="#patterns">Patterns</a><a href="#signals">Setups</a></div>
+        <div><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a></div>
+        <div><h4>Legal</h4><a href="#">Terms</a><a href="#">Privacy</a></div>
+      </div>
+    </div>
+    <div class="container footer__note muted">
+      Demo project for educational purposes — not affiliated with altFINS. Market data via CoinGecko.
+      Nothing here is financial advice.
+    </div>
+  </footer>
+
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
