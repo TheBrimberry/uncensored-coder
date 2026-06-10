@@ -10,7 +10,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trading import indicators as ind
 from trading import strategies as strat
-from trading.market_data import MarketData, _looks_like_crypto
+from trading.market_data import (
+    MarketData, _looks_like_crypto, _looks_like_fx, _fx_to_yahoo,
+)
+from trading.brokers import OrderType
 from trading.forecast import Forecaster
 from trading.analysis import AnalysisEngine
 from trading.risk import build_trade_plan, position_size
@@ -216,6 +219,56 @@ def test_all_metrics_callable():
 
 
 # --- broker smoke test script -------------------------------------------
+# --- review-fix regressions ---------------------------------------------
+def test_fx_detection_and_yahoo_mapping():
+    assert _looks_like_fx("EURUSD") and _looks_like_fx("EUR/USD")
+    assert _looks_like_fx("GBPJPY")
+    assert not _looks_like_fx("AAPL")
+    assert not _looks_like_fx("BTCUSDT")     # crypto, not FX
+    assert _fx_to_yahoo("EUR/USD") == "EURUSD=X"
+    assert _fx_to_yahoo("EURUSD=X") == "EURUSD=X"
+
+
+def test_paper_broker_weighted_average_price():
+    bkr = get_broker("paper")
+    bkr.connect()
+    bkr.place_order(Order("X", OrderSide.BUY, 1.0, price=100))
+    bkr.place_order(Order("X", OrderSide.BUY, 1.0, price=200))
+    pos = bkr.positions()[0]
+    assert pos.qty == 2.0
+    assert abs(pos.avg_price - 150.0) < 1e-9   # was 100 before the fix
+
+
+def test_paper_broker_reduce_keeps_avg_then_flips():
+    bkr = get_broker("paper")
+    bkr.connect()
+    bkr.place_order(Order("X", OrderSide.BUY, 2.0, price=100))
+    bkr.place_order(Order("X", OrderSide.SELL, 1.0, price=150))   # reduce
+    pos = bkr.positions()[0]
+    assert pos.qty == 1.0 and abs(pos.avg_price - 100.0) < 1e-9   # avg unchanged
+    bkr.place_order(Order("X", OrderSide.SELL, 3.0, price=150))   # flip through 0
+    pos = bkr.positions()[0]
+    assert pos.qty == -2.0 and abs(pos.avg_price - 150.0) < 1e-9  # remainder reprices
+
+
+def test_backtest_eod_close_counts_in_drawdown():
+    # Strictly declining series; force long entries with a wide stop so the
+    # position survives to the final bar and closes at a loss (EOD).
+    n = 120
+    close = [200.0 - i for i in range(n)]
+    high = [c + 0.1 for c in close]
+    low = [c - 0.1 for c in close]
+    bars = {"open": close[:], "high": high, "low": low, "close": close,
+            "volume": [1.0] * n}
+    always_long = lambda w: strat.Signal("forced", strat.Direction.LONG, 1.0, "test")
+    # huge stop multiplier -> stop never hit -> trade closes only at EOD
+    bt = Backtester(warmup=30, atr_stop_mult=100.0, rr=2.0)
+    res = bt.run(bars, strategy=always_long, symbol="DOWN")
+    assert res.n_trades >= 1
+    assert res.trades[-1].reason == "eod"
+    assert res.max_drawdown_pct > 0.0       # was understated before the fix
+
+
 def test_broker_smoke_test_is_safe_noop_without_creds():
     import subprocess
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

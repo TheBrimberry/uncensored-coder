@@ -130,11 +130,13 @@ class Backtester:
                     open_trade = Trade(direction, i, price,
                                        stop_frac=stop_dist / price if price else 0.0)
 
-            equity_curve.append(equity if open_trade is None else equity)
+            equity_curve.append(equity)
 
         # close any dangling position at the last price
         if open_trade is not None:
             equity = self._close_trade(open_trade, n - 1, close[-1], "eod", equity, trades)
+            # Record the realized EOD equity so max-drawdown reflects this close.
+            equity_curve.append(equity)
 
         return self._metrics(symbol, strat_name, trades, equity, equity_curve)
 

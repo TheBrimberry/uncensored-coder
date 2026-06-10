@@ -107,10 +107,18 @@ class Broker:
         fill = order.price or 0.0
         pos = self._paper_positions.get(order.symbol)
         signed = order.qty if order.side == OrderSide.BUY else -order.qty
-        if pos is None:
+        if pos is None or pos.qty == 0:
             self._paper_positions[order.symbol] = Position(order.symbol, signed, fill)
         else:
-            pos.qty += signed
+            new_qty = pos.qty + signed
+            if (pos.qty > 0) == (signed > 0):
+                # Adding to the position: volume-weighted average entry price.
+                pos.avg_price = (pos.avg_price * abs(pos.qty) + fill * abs(signed)) / abs(new_qty)
+            elif new_qty != 0 and (new_qty > 0) != (pos.qty > 0):
+                # Flipped through zero: the remainder opens at the new fill price.
+                pos.avg_price = fill
+            # Reducing (same side remains) or fully closing keeps the prior avg.
+            pos.qty = new_qty
         return OrderResult(
             accepted=True, broker=self.name, order=order, simulated=True,
             message=f"[PAPER] {order.side.value} {order.qty} {order.symbol} simulated.",

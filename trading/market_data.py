@@ -55,6 +55,27 @@ def _crypto_to_yahoo(symbol: str) -> str:
     return f"{base}-USD"
 
 
+# ISO 4217 codes for the major/minor currencies the agent treats as FX.
+_FX_CURRENCIES = {
+    "USD", "EUR", "GBP", "JPY", "CHF", "AUD", "NZD", "CAD", "CNH", "CNY",
+    "SEK", "NOK", "DKK", "SGD", "HKD", "ZAR", "MXN", "TRY", "PLN", "HUF",
+}
+
+
+def _looks_like_fx(symbol: str) -> bool:
+    """Detect a spot FX pair like EURUSD or EUR/USD (two known currency codes)."""
+    s = symbol.upper().replace("/", "").replace("=X", "")
+    if len(s) != 6:
+        return False
+    return s[:3] in _FX_CURRENCIES and s[3:] in _FX_CURRENCIES
+
+
+def _fx_to_yahoo(symbol: str) -> str:
+    """Map an FX pair to Yahoo's ticker (EURUSD / EUR/USD -> EURUSD=X)."""
+    s = symbol.upper().replace("/", "")
+    return s if s.endswith("=X") else f"{s}=X"
+
+
 def _synthetic_series(symbol: str, limit: int, seed_price: float = 100.0) -> OHLCV:
     """Deterministic pseudo-random walk so offline runs still produce signals."""
     seed = sum(ord(c) for c in symbol)
@@ -84,7 +105,14 @@ class MarketData:
 
     def get_ohlcv(self, symbol: str, timeframe: str = "1d",
                   limit: int = 300) -> OHLCV:
-        if _looks_like_crypto(symbol):
+        # FX is checked first: 'EUR/USD' contains a slash and would otherwise be
+        # misread as crypto. Yahoo serves FX under the 'EURUSD=X' ticker.
+        if _looks_like_fx(symbol):
+            data = self._try_yfinance(_fx_to_yahoo(symbol), timeframe, limit)
+            if data:
+                data.symbol = symbol
+                return data
+        elif _looks_like_crypto(symbol):
             # Prefer a real exchange; if blocked/unavailable, fall back to
             # Yahoo's crypto feed (BTC/USDT -> BTC-USD) before going synthetic.
             data = self._try_ccxt(symbol, timeframe, limit)
