@@ -45,6 +45,14 @@ def run_once(args):
         result = agent.backtest(args.symbol, strategy=args.backtest,
                                 timeframe=args.timeframe)
         out(result.summary(), title=f"Backtest: {args.symbol}", style="yellow")
+    elif args.optimize:
+        result = agent.optimize(args.symbol, strategy=args.optimize,
+                                timeframe=args.timeframe, metric=args.metric)
+        out(result.summary(), title=f"Optimize: {args.symbol}", style="yellow")
+    elif args.walk_forward:
+        result = agent.walk_forward(args.symbol, strategy=args.walk_forward,
+                                    timeframe=args.timeframe, metric=args.metric)
+        out(result.summary(), title=f"Walk-forward: {args.symbol}", style="yellow")
     elif args.no_llm:
         report = agent.analyze(args.symbol, timeframe=args.timeframe,
                                horizon=args.forecast)
@@ -99,6 +107,12 @@ def main():
     p.add_argument("--no-llm", action="store_true", help="Skip LLM, show computed report")
     p.add_argument("--backtest", "-b", nargs="?", const="ensemble",
                    help="Backtest a strategy (default: ensemble) on historical bars")
+    p.add_argument("--optimize", "-o", nargs="?", const="ma_crossover",
+                   help="Grid-search a strategy's parameters (default: ma_crossover)")
+    p.add_argument("--walk-forward", "-w", nargs="?", const="ma_crossover",
+                   help="Out-of-sample walk-forward validation (default: ma_crossover)")
+    p.add_argument("--metric", default="calmar",
+                   help="Optimization metric: calmar|profit_factor|sharpe|total_return|win_rate")
     p.add_argument("--interactive", "-i", action="store_true", help="Interactive loop")
     p.add_argument("--knowledge", "-k", nargs="?", const="", help="Dump knowledge base")
     args = p.parse_args()

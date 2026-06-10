@@ -350,6 +350,7 @@ local LLM.
 - **Strategy ensemble** — trend-following, mean-reversion, breakout, momentum, Supertrend, blended into a net bias.
 - **Probabilistic forecasting** — P(up), expected return band scaled by volatility & horizon, with confidence.
 - **Backtesting** — event-driven, no-lookahead harness with win rate, profit factor, max drawdown & Sharpe.
+- **Optimization & walk-forward** — grid-search strategy params, then anchored out-of-sample walk-forward that flags overfit (FRAGILE) vs robust strategies.
 - **Risk-managed plans** — ATR-normalized entry/stop/target, position sizing from your equity & risk %.
 - **News & events** — headline sentiment + macro/crypto catalyst calendar (FOMC, CPI, earnings, halvings, unlocks).
 - **Brokers** — uniform interface over **TradeLocker, MetaTrader5, ccxt, Alpaca** — **paper/dry-run by default**.
@@ -373,6 +374,15 @@ python trade.py ETH/USDT -q "is this a good breakout entry?"
 # Backtest a strategy on historical bars (default strategy: ensemble)
 python trade.py BTC/USDT --backtest ma_crossover
 
+# Grid-search a strategy's parameters (metric: calmar|profit_factor|sharpe|...)
+python trade.py BTC/USDT --optimize ma_crossover --metric sharpe
+
+# Out-of-sample walk-forward validation (FRAGILE vs ROBUST verdict)
+python trade.py AAPL --walk-forward rsi_reversion
+
+# Broker connectivity smoke test (demo accounts; safe no-op without creds)
+python scripts/broker_smoke_test.py
+
 # Interactive loop  (type 'SYMBOL ? question', 'kb crypto', or 'exit')
 python trade.py --interactive
 
@@ -393,6 +403,8 @@ print(report.to_text())
 print(agent.forecast("AAPL").summary())          # probabilistic outlook
 print(agent.trade_plan("EURUSD").summary())      # risk-managed plan
 print(agent.backtest("BTC/USDT", "ensemble").summary())  # historical validation
+print(agent.optimize("BTC/USDT", "ma_crossover").summary())      # grid search
+print(agent.walk_forward("AAPL", "rsi_reversion").summary())     # OOS robustness
 print(agent.ask("ETH/USDT", "swing or scalp?"))  # LLM-narrated read
 
 # Execution is PAPER by default; live needs live=True + real credentials.
@@ -409,6 +421,22 @@ via the `BTC-USD` feed), `ccxt` (crypto exchanges), `MetaTrader5` / `tradelocker
 / `alpaca-py` (brokers). Data resolution falls through gracefully:
 **crypto → ccxt exchange → Yahoo crypto feed → synthetic**, so you still get real
 prices even when an exchange API is unreachable.
+
+### Live brokers (optional)
+
+Execution defaults to **paper/dry-run**. To smoke-test a real *demo* account,
+export credentials and run the connect-only script (it never places a live order
+unless you pass `--place-test-order`):
+
+```bash
+# MetaTrader 5
+export MT5_LOGIN=... MT5_PASSWORD=... MT5_SERVER=...
+# TradeLocker
+export TRADELOCKER_USERNAME=... TRADELOCKER_PASSWORD=... TRADELOCKER_SERVER=...
+
+python scripts/broker_smoke_test.py            # connect + list positions only
+python scripts/broker_smoke_test.py --place-test-order --symbol EURUSD --qty 0.01
+```
 
 Run the tests (all offline, no keys required):
 

@@ -28,6 +28,7 @@ from .knowledge_base import KnowledgeBase, TRADING_REPOS
 from .analysis import AnalysisEngine, AnalysisReport
 from .forecast import Forecaster, Forecast
 from .backtest import Backtester, BacktestResult
+from .optimize import grid_search, walk_forward, GridResult, WalkForwardResult, DEFAULT_GRIDS
 
 __all__ = [
     "TradingAgent",
@@ -39,6 +40,11 @@ __all__ = [
     "Forecast",
     "Backtester",
     "BacktestResult",
+    "grid_search",
+    "walk_forward",
+    "GridResult",
+    "WalkForwardResult",
+    "DEFAULT_GRIDS",
 ]
 
 __version__ = "1.0.0"

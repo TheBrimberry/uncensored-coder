@@ -19,6 +19,7 @@ from trading.knowledge_base import KnowledgeBase
 from trading.news import score_sentiment
 from trading.agent import TradingAgent
 from trading.backtest import Backtester
+from trading.optimize import grid_search, walk_forward, DEFAULT_GRIDS, METRICS
 
 
 # --- indicators ----------------------------------------------------------
@@ -168,3 +169,62 @@ def test_backtest_unknown_strategy_raises():
     bars = MarketData().get_ohlcv("X", limit=300).as_bars()
     with pytest.raises(ValueError):
         Backtester().run(bars, strategy="nope")
+
+
+# --- optimization & walk-forward ----------------------------------------
+def test_grid_search_picks_best():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=600).as_bars()
+    grid = grid_search(bars, "ma_crossover", DEFAULT_GRIDS["ma_crossover"],
+                       metric="total_return", symbol="BTC/USDT")
+    assert grid.best_params in [p for p, _, _ in grid.table]
+    # table is sorted best-first
+    scores = [s for _, s, _ in grid.table]
+    assert scores == sorted(scores, reverse=True)
+    assert grid.best_score == scores[0]
+
+
+def test_grid_search_unknown_metric_raises():
+    import pytest
+    bars = MarketData().get_ohlcv("X", limit=300).as_bars()
+    with pytest.raises(ValueError):
+        grid_search(bars, "ma_crossover", {}, metric="nope")
+
+
+def test_walk_forward_runs_oos():
+    bars = MarketData().get_ohlcv("ETH/USDT", limit=900).as_bars()
+    wf = walk_forward(bars, "rsi_reversion", DEFAULT_GRIDS["rsi_reversion"],
+                      n_folds=3, metric="total_return", symbol="ETH/USDT")
+    assert wf.n_folds >= 1
+    assert len(wf.fold_params) == wf.n_folds
+    assert isinstance(wf.robust, bool)
+    assert "WALK-FORWARD" in wf.summary()
+
+
+def test_agent_optimize_and_walk_forward():
+    agent = TradingAgent()
+    g = agent.optimize("AAPL", strategy="bollinger_breakout", limit=500)
+    assert g.strategy == "bollinger_breakout"
+    w = agent.walk_forward("AAPL", strategy="ma_crossover", limit=800, n_folds=3)
+    assert "WALK-FORWARD" in w.summary()
+
+
+def test_all_metrics_callable():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=400).as_bars()
+    res = Backtester(warmup=150).run(bars, strategy="ma_crossover")
+    for name, fn in METRICS.items():
+        assert isinstance(fn(res), (int, float)), name
+
+
+# --- broker smoke test script -------------------------------------------
+def test_broker_smoke_test_is_safe_noop_without_creds():
+    import subprocess
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # Ensure no broker creds leak in from the environment.
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("MT5_", "TRADELOCKER_"))}
+    proc = subprocess.run(
+        [sys.executable, os.path.join(root, "scripts", "broker_smoke_test.py")],
+        capture_output=True, text=True, env=env, timeout=60,
+    )
+    assert proc.returncode == 0
+    assert "safe no-op" in proc.stdout

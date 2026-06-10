@@ -77,7 +77,10 @@ class Backtester:
         self.warmup = warmup
 
     def run(self, bars: Dict[str, List[float]], strategy: StrategyFn | str = "ensemble",
-            symbol: str = "?") -> BacktestResult:
+            symbol: str = "?", start: Optional[int] = None) -> BacktestResult:
+        """Walk bars and simulate. `start` overrides the first tradable index so
+        an out-of-sample run can warm indicators on prior bars while only opening
+        trades from `start` onward (used by walk-forward validation)."""
         strat_fn, strat_name = self._resolve_strategy(strategy)
         close = bars["close"]
         high, low = bars["high"], bars["low"]
@@ -90,8 +93,12 @@ class Backtester:
         open_trade: Optional[Trade] = None
         stop = target = 0.0
 
-        start = max(self.warmup, self.atr_period + 2)
-        for i in range(start, n):
+        if start is not None:
+            # Anchored OOS run: indicators warm up on all prior bars; trade from `start`.
+            first = max(start, self.atr_period + 2)
+        else:
+            first = max(self.warmup, self.atr_period + 2)
+        for i in range(first, n):
             price = close[i]
 
             # --- manage an open position (check stop/target on this bar) ---

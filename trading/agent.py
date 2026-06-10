@@ -20,6 +20,7 @@ from .brokers import Broker, Order, OrderSide, OrderType, get_broker
 from .forecast import Forecast
 from .knowledge_base import KnowledgeBase
 from .market_data import _looks_like_crypto
+from .optimize import grid_search, walk_forward, GridResult, WalkForwardResult, DEFAULT_GRIDS
 from .prompts import TRADING_SYSTEM_PROMPT, build_analysis_prompt
 from .risk import TradePlan
 
@@ -69,6 +70,24 @@ class TradingAgent:
         bt = Backtester(starting_equity=self.account_equity, risk_pct=self.risk_pct,
                         warmup=min(200, max(50, len(data) // 3)), **kwargs)
         return bt.run(data.as_bars(), strategy=strategy, symbol=symbol)
+
+    def optimize(self, symbol: str, strategy: str = "ma_crossover",
+                 timeframe: str = "1d", limit: int = 600, metric: str = "calmar",
+                 param_grid: Optional[dict] = None) -> "GridResult":
+        """Grid-search a strategy's parameters on historical bars."""
+        data = self.engine.md.get_ohlcv(symbol, timeframe, limit=limit)
+        grid = param_grid if param_grid is not None else DEFAULT_GRIDS.get(strategy, {})
+        return grid_search(data.as_bars(), strategy, grid, metric=metric, symbol=symbol)
+
+    def walk_forward(self, symbol: str, strategy: str = "ma_crossover",
+                     timeframe: str = "1d", limit: int = 800, n_folds: int = 4,
+                     metric: str = "calmar",
+                     param_grid: Optional[dict] = None) -> "WalkForwardResult":
+        """Out-of-sample walk-forward validation — the honest robustness check."""
+        data = self.engine.md.get_ohlcv(symbol, timeframe, limit=limit)
+        grid = param_grid if param_grid is not None else DEFAULT_GRIDS.get(strategy, {})
+        return walk_forward(data.as_bars(), strategy, grid, n_folds=n_folds,
+                            metric=metric, symbol=symbol)
 
     def ask(self, symbol: str, question: Optional[str] = None,
             timeframe: str = "1d", horizon: int = 5) -> str:
