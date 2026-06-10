@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .analysis import AnalysisEngine, AnalysisReport
+from .backtest import Backtester, BacktestResult
 from .brokers import Broker, Order, OrderSide, OrderType, get_broker
 from .forecast import Forecast
 from .knowledge_base import KnowledgeBase
@@ -60,6 +61,14 @@ class TradingAgent:
 
     def trade_plan(self, symbol: str, timeframe: str = "1d") -> Optional[TradePlan]:
         return self.analyze(symbol, timeframe).trade_plan
+
+    def backtest(self, symbol: str, strategy: str = "ensemble", timeframe: str = "1d",
+                 limit: int = 500, **kwargs) -> BacktestResult:
+        """Validate a strategy on historical bars before risking capital."""
+        data = self.engine.md.get_ohlcv(symbol, timeframe, limit=limit)
+        bt = Backtester(starting_equity=self.account_equity, risk_pct=self.risk_pct,
+                        warmup=min(200, max(50, len(data) // 3)), **kwargs)
+        return bt.run(data.as_bars(), strategy=strategy, symbol=symbol)
 
     def ask(self, symbol: str, question: Optional[str] = None,
             timeframe: str = "1d", horizon: int = 5) -> str:

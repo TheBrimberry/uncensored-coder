@@ -41,7 +41,11 @@ def _banner():
 def run_once(args):
     agent = TradingAgent(model=args.model, account_equity=args.equity,
                          risk_pct=args.risk)
-    if args.no_llm:
+    if args.backtest:
+        result = agent.backtest(args.symbol, strategy=args.backtest,
+                                timeframe=args.timeframe)
+        out(result.summary(), title=f"Backtest: {args.symbol}", style="yellow")
+    elif args.no_llm:
         report = agent.analyze(args.symbol, timeframe=args.timeframe,
                                horizon=args.forecast)
         out(report.to_text(), title=f"Analysis: {args.symbol}")
@@ -93,6 +97,8 @@ def main():
     p.add_argument("--risk", type=float, default=1.0, help="Risk %% per trade")
     p.add_argument("--model", "-m", help="Override Ollama model")
     p.add_argument("--no-llm", action="store_true", help="Skip LLM, show computed report")
+    p.add_argument("--backtest", "-b", nargs="?", const="ensemble",
+                   help="Backtest a strategy (default: ensemble) on historical bars")
     p.add_argument("--interactive", "-i", action="store_true", help="Interactive loop")
     p.add_argument("--knowledge", "-k", nargs="?", const="", help="Dump knowledge base")
     args = p.parse_args()

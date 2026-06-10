@@ -44,6 +44,17 @@ def _looks_like_crypto(symbol: str) -> bool:
     return "/" in s or s.endswith(("USDT", "USDC", "PERP")) or s in {"BTC", "ETH"}
 
 
+def _crypto_to_yahoo(symbol: str) -> str:
+    """Map an exchange-style crypto symbol to Yahoo's ticker (BTC/USDT -> BTC-USD)."""
+    s = symbol.upper().replace("PERP", "")
+    base = s.split("/")[0] if "/" in s else s
+    for quote in ("USDT", "USDC", "USD"):
+        if base.endswith(quote) and base != quote:
+            base = base[: -len(quote)]
+            break
+    return f"{base}-USD"
+
+
 def _synthetic_series(symbol: str, limit: int, seed_price: float = 100.0) -> OHLCV:
     """Deterministic pseudo-random walk so offline runs still produce signals."""
     seed = sum(ord(c) for c in symbol)
@@ -74,8 +85,14 @@ class MarketData:
     def get_ohlcv(self, symbol: str, timeframe: str = "1d",
                   limit: int = 300) -> OHLCV:
         if _looks_like_crypto(symbol):
+            # Prefer a real exchange; if blocked/unavailable, fall back to
+            # Yahoo's crypto feed (BTC/USDT -> BTC-USD) before going synthetic.
             data = self._try_ccxt(symbol, timeframe, limit)
             if data:
+                return data
+            data = self._try_yfinance(_crypto_to_yahoo(symbol), timeframe, limit)
+            if data:
+                data.symbol = symbol
                 return data
         else:
             data = self._try_yfinance(symbol, timeframe, limit)

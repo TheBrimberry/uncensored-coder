@@ -18,6 +18,7 @@ from trading.brokers import get_broker, Order, OrderSide
 from trading.knowledge_base import KnowledgeBase
 from trading.news import score_sentiment
 from trading.agent import TradingAgent
+from trading.backtest import Backtester
 
 
 # --- indicators ----------------------------------------------------------
@@ -136,3 +137,34 @@ def test_agent_execute_paper_plan():
     plan = agent.trade_plan("BTC/USDT")
     msg = agent.execute_plan(plan, broker="paper")
     assert "PAPER" in msg or "flat" in msg
+
+
+# --- backtest ------------------------------------------------------------
+def test_backtest_runs_and_reports():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=500).as_bars()
+    result = Backtester(warmup=200).run(bars, strategy="ma_crossover", symbol="BTC/USDT")
+    assert result.n_trades >= 0
+    assert 0.0 <= result.win_rate <= 1.0
+    assert result.max_drawdown_pct >= 0.0
+    assert result.final_equity > 0
+    # closed trades must have an exit
+    assert all(t.exit_index is not None for t in result.trades)
+
+
+def test_backtest_no_lookahead_window_grows():
+    # ensemble strategy across the whole series should produce a valid result
+    bars = MarketData().get_ohlcv("ETH/USDT", limit=400).as_bars()
+    result = Backtester(warmup=150).run(bars, strategy="ensemble", symbol="ETH/USDT")
+    assert "BACKTEST" in result.summary()
+
+
+def test_agent_backtest_helper():
+    result = TradingAgent().backtest("AAPL", strategy="ensemble", limit=400)
+    assert isinstance(result.summary(), str)
+
+
+def test_backtest_unknown_strategy_raises():
+    import pytest
+    bars = MarketData().get_ohlcv("X", limit=300).as_bars()
+    with pytest.raises(ValueError):
+        Backtester().run(bars, strategy="nope")

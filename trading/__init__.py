@@ -27,6 +27,7 @@ from .agent import TradingAgent
 from .knowledge_base import KnowledgeBase, TRADING_REPOS
 from .analysis import AnalysisEngine, AnalysisReport
 from .forecast import Forecaster, Forecast
+from .backtest import Backtester, BacktestResult
 
 __all__ = [
     "TradingAgent",
@@ -36,6 +37,8 @@ __all__ = [
     "AnalysisReport",
     "Forecaster",
     "Forecast",
+    "Backtester",
+    "BacktestResult",
 ]
 
 __version__ = "1.0.0"

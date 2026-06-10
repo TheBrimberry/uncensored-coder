@@ -349,6 +349,7 @@ local LLM.
 - **Technical analysis** — EMA/SMA, RSI, MACD, Bollinger, ATR, Stochastic, Supertrend (pure-python, no hard deps).
 - **Strategy ensemble** — trend-following, mean-reversion, breakout, momentum, Supertrend, blended into a net bias.
 - **Probabilistic forecasting** — P(up), expected return band scaled by volatility & horizon, with confidence.
+- **Backtesting** — event-driven, no-lookahead harness with win rate, profit factor, max drawdown & Sharpe.
 - **Risk-managed plans** — ATR-normalized entry/stop/target, position sizing from your equity & risk %.
 - **News & events** — headline sentiment + macro/crypto catalyst calendar (FOMC, CPI, earnings, halvings, unlocks).
 - **Brokers** — uniform interface over **TradeLocker, MetaTrader5, ccxt, Alpaca** — **paper/dry-run by default**.
@@ -369,6 +370,9 @@ python trade.py EURUSD --timeframe 1h --forecast 10 --equity 25000 --risk 0.5
 # Ask a specific question
 python trade.py ETH/USDT -q "is this a good breakout entry?"
 
+# Backtest a strategy on historical bars (default strategy: ensemble)
+python trade.py BTC/USDT --backtest ma_crossover
+
 # Interactive loop  (type 'SYMBOL ? question', 'kb crypto', or 'exit')
 python trade.py --interactive
 
@@ -388,6 +392,7 @@ print(report.to_text())
 
 print(agent.forecast("AAPL").summary())          # probabilistic outlook
 print(agent.trade_plan("EURUSD").summary())      # risk-managed plan
+print(agent.backtest("BTC/USDT", "ensemble").summary())  # historical validation
 print(agent.ask("ETH/USDT", "swing or scalp?"))  # LLM-narrated read
 
 # Execution is PAPER by default; live needs live=True + real credentials.
@@ -399,9 +404,11 @@ print(agent.execute_plan(plan, broker="paper"))
 
 The agent runs offline out of the box using a synthetic-data fallback (clearly
 flagged). For **real** market data and execution, uncomment the relevant lines in
-[`requirements.txt`](requirements.txt) — e.g. `yfinance` (stocks/fx), `ccxt`
-(crypto), `MetaTrader5` / `tradelocker` / `alpaca-py` (brokers). Every
-integration degrades gracefully if its dependency or API key is absent.
+[`requirements.txt`](requirements.txt) — e.g. `yfinance` (stocks/fx **and crypto**
+via the `BTC-USD` feed), `ccxt` (crypto exchanges), `MetaTrader5` / `tradelocker`
+/ `alpaca-py` (brokers). Data resolution falls through gracefully:
+**crypto → ccxt exchange → Yahoo crypto feed → synthetic**, so you still get real
+prices even when an exchange API is unreachable.
 
 Run the tests (all offline, no keys required):
 
