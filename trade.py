@@ -15,6 +15,7 @@ Examples
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 try:
@@ -53,6 +54,9 @@ def run_once(args):
         result = agent.walk_forward(args.symbol, strategy=args.walk_forward,
                                     timeframe=args.timeframe, metric=args.metric)
         out(result.summary(), title=f"Walk-forward: {args.symbol}", style="yellow")
+    elif args.insights:
+        out(agent.insights(args.symbol, timeframe=args.timeframe).to_text(),
+            title=f"Co-pilot: {args.symbol}", style="cyan")
     elif args.no_llm:
         report = agent.analyze(args.symbol, timeframe=args.timeframe,
                                horizon=args.forecast)
@@ -113,14 +117,45 @@ def main():
                    help="Out-of-sample walk-forward validation (default: ma_crossover)")
     p.add_argument("--metric", default="calmar",
                    help="Optimization metric: calmar|profit_factor|sharpe|total_return|win_rate")
+    p.add_argument("--insights", action="store_true",
+                   help="Co-pilot: highlight patterns, key levels and insights")
     p.add_argument("--interactive", "-i", action="store_true", help="Interactive loop")
     p.add_argument("--knowledge", "-k", nargs="?", const="", help="Dump knowledge base")
+    p.add_argument("--learn", help="Retrieve deep knowledge for a topic/question")
+    p.add_argument("--ingest", help="Teach the agent: ingest a file or directory of notes")
+    p.add_argument("--review", help="Review past trading data (CSV or JSON of trades)")
+    p.add_argument("--tune", help="Tune a bot's parameters from its JSON config file")
+    p.add_argument("--apply", action="store_true",
+                   help="With --tune: apply the change if robust & improving (else dry-run)")
     args = p.parse_args()
 
     _banner()
 
     if args.knowledge is not None:
         out(TradingAgent().knowledge(args.knowledge or None), title="Knowledge base")
+        return
+    if args.learn:
+        out(TradingAgent().learn(args.learn), title=f"Knowledge: {args.learn}")
+        return
+    if args.ingest:
+        agent = TradingAgent()
+        path = args.ingest
+        kind = "directory" if os.path.isdir(path) else "file"
+        msg = agent.ingest_knowledge(**{kind: path},
+                                     save_path=os.path.expanduser("~/.trading_corpus.json"))
+        out(msg, title="Ingest")
+        return
+    if args.review:
+        out(TradingAgent().review_performance(args.review).to_text(),
+            title=f"Performance: {args.review}", style="magenta")
+        return
+    if args.tune:
+        from trading import BotConfig
+        agent = TradingAgent()
+        bot = BotConfig.load(args.tune)
+        proposal = agent.tune_bot(bot, metric=args.metric, apply=args.apply,
+                                  path=args.tune if args.apply else None)
+        out(proposal.summary(), title=f"Tune: {bot.name}", style="yellow")
         return
     if args.interactive:
         run_interactive(args)

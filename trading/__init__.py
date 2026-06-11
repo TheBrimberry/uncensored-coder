@@ -7,33 +7,41 @@ open-source trading ecosystem (freqtrade, ccxt, backtrader, vectorbt, OpenBB,
 qlib, FinRL, pandas-ta, TradeLocker, MetaTrader5, alpaca, and more) into a
 single reasoning engine driven by a local LLM.
 
-Design principles
------------------
-* **Honest, not magical.** No software can guarantee a market prediction.
-  Forecasts here are *probabilistic* with explicit confidence, never promises.
-* **Multi-asset.** Forex (FX/"4X"), crypto, stocks, indices, futures, options.
-* **Pluggable.** Every external integration (data, brokers, news) degrades
-  gracefully if its optional dependency or API key is missing.
-* **Composable.** Indicators -> strategies -> signals -> analysis -> agent.
+Capabilities
+------------
+* Analyze/forecast any symbol (FX, crypto, stocks, futures) — probabilistically.
+* Backtest, grid-optimize and walk-forward-validate strategies.
+* Review your past trading data and diagnose weaknesses.
+* Auto-tune bot parameters AND propose code edits — safely, with guardrails.
+* Side-by-side co-pilot: highlight patterns, key levels and insights.
+* Account guardian: enforce stops, size/loss/drawdown limits — don't blow up.
+* Deep, growable knowledge corpus you can teach with your own sources.
 
-Public surface
---------------
 >>> from trading import TradingAgent
 >>> agent = TradingAgent()
->>> print(agent.analyze("BTC/USDT"))
+>>> print(agent.analyze("BTC/USDT").to_text())
 """
 
 from .agent import TradingAgent
 from .knowledge_base import KnowledgeBase, TRADING_REPOS
+from .knowledge_corpus import KnowledgeCorpus, BUILTIN_LESSONS, Lesson
 from .analysis import AnalysisEngine, AnalysisReport
 from .forecast import Forecaster, Forecast
 from .backtest import Backtester, BacktestResult
 from .optimize import grid_search, walk_forward, GridResult, WalkForwardResult, DEFAULT_GRIDS
+from .journal import TradeJournal, TradeRecord, PerformanceReport, Insight
+from .bot import BotConfig
+from .autotune import AutoTuner, TuneProposal, CodeProposal
+from .guardian import RiskGuardian, RiskLimits, GuardedBroker, GuardianState, attach_sl_tp
+from .patterns import analyze_patterns, MarketInsights, Pattern
 
 __all__ = [
     "TradingAgent",
     "KnowledgeBase",
     "TRADING_REPOS",
+    "KnowledgeCorpus",
+    "BUILTIN_LESSONS",
+    "Lesson",
     "AnalysisEngine",
     "AnalysisReport",
     "Forecaster",
@@ -45,6 +53,22 @@ __all__ = [
     "GridResult",
     "WalkForwardResult",
     "DEFAULT_GRIDS",
+    "TradeJournal",
+    "TradeRecord",
+    "PerformanceReport",
+    "Insight",
+    "BotConfig",
+    "AutoTuner",
+    "TuneProposal",
+    "CodeProposal",
+    "RiskGuardian",
+    "RiskLimits",
+    "GuardedBroker",
+    "GuardianState",
+    "attach_sl_tp",
+    "analyze_patterns",
+    "MarketInsights",
+    "Pattern",
 ]
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

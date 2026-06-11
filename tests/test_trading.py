@@ -281,3 +281,196 @@ def test_broker_smoke_test_is_safe_noop_without_creds():
     )
     assert proc.returncode == 0
     assert "safe no-op" in proc.stdout
+
+
+# ========================================================================
+# v2: journal, bots, guardian, patterns, autotune, knowledge corpus
+# ========================================================================
+from trading.journal import TradeJournal, TradeRecord
+from trading.bot import BotConfig
+from trading.guardian import RiskGuardian, RiskLimits, GuardedBroker, attach_sl_tp
+from trading.patterns import analyze_patterns
+from trading.autotune import AutoTuner
+from trading.knowledge_corpus import KnowledgeCorpus, BUILTIN_LESSONS
+
+
+# --- journal / performance review ---------------------------------------
+def test_trade_record_pnl_and_return():
+    t = TradeRecord("X", "long", entry_price=100, exit_price=110, qty=2, fees=1)
+    assert abs(t.net_pnl - 19.0) < 1e-9      # (110-100)*2 - 1
+    short = TradeRecord("X", "short", entry_price=100, exit_price=90, qty=1)
+    assert abs(short.net_pnl - 10.0) < 1e-9
+    assert t.is_win
+
+
+def test_journal_analyze_and_diagnose():
+    recs = [TradeRecord("EURUSD", "long", 1.10, 1.11),
+            TradeRecord("EURUSD", "short", 1.11, 1.12),   # losing short
+            TradeRecord("GBPUSD", "long", 1.30, 1.28)]    # losing symbol
+    rep = TradeJournal.from_records(recs).analyze()
+    assert rep.n_trades == 3
+    assert 0 <= rep.win_rate <= 1
+    assert rep.insights                                    # produced diagnoses
+
+
+def test_journal_from_csv(tmp_path):
+    csv_path = tmp_path / "t.csv"
+    csv_path.write_text("ticker,action,entry,exit,size\n"
+                        "AAPL,buy,100,110,10\nAAPL,sell,110,108,10\n")
+    rep = TradeJournal.from_csv(str(csv_path)).analyze()
+    assert rep.n_trades == 2
+
+
+def test_review_via_agent_and_backtest():
+    agent = TradingAgent()
+    bt = agent.backtest("BTC/USDT", "ma_crossover", limit=400)
+    rep = agent.review_performance(bt)        # from BacktestResult
+    assert rep.n_trades == bt.n_trades
+
+
+# --- bot config: audit + rollback ---------------------------------------
+def test_botconfig_update_audit_and_rollback():
+    bot = BotConfig(name="b", symbol="EURUSD", strategy="ma_crossover",
+                    params={"fast": 50, "slow": 200})
+    bot.update_params({"fast": 20}, reason="test")
+    assert bot.params["fast"] == 20
+    assert len(bot.history) == 1
+    bot.rollback()
+    assert bot.params["fast"] == 50
+
+
+def test_botconfig_save_load(tmp_path):
+    p = tmp_path / "bot.json"
+    bot = BotConfig(name="b", symbol="BTC/USDT", strategy="rsi_reversion",
+                    params={"period": 14})
+    bot.save(str(p))
+    loaded = BotConfig.load(str(p))
+    assert loaded.symbol == "BTC/USDT" and loaded.params["period"] == 14
+
+
+# --- guardian: account protection ---------------------------------------
+def test_guardian_requires_stop_loss():
+    g = RiskGuardian(10_000, RiskLimits())
+    d = g.check(Order("X", OrderSide.BUY, 1, price=100, stop_loss=None))
+    assert not d.allowed and any("stop" in r.lower() for r in d.reasons)
+
+
+def test_guardian_blocks_oversized_risk():
+    g = RiskGuardian(10_000, RiskLimits(max_risk_pct_per_trade=1.0))
+    # risking 100*5 = 500 = 5% > 1%
+    d = g.check(Order("X", OrderSide.BUY, 5, price=100, stop_loss=0))
+    assert not d.allowed
+
+
+def test_guardian_daily_loss_circuit_breaker():
+    g = RiskGuardian(10_000, RiskLimits(max_daily_loss_pct=5.0))
+    g.record_fill(-600)                       # -6% day
+    d = g.check(Order("X", OrderSide.BUY, 1, price=100, stop_loss=98))
+    assert not d.allowed and g.state.halted
+
+
+def test_guardian_drawdown_kill_switch():
+    g = RiskGuardian(10_000, RiskLimits(max_total_drawdown_pct=20.0))
+    g.record_fill(1000)                        # peak 11k
+    g.record_fill(-3000)                       # equity 8k, dd ~27%
+    assert g.state.halted and "drawdown" in g.state.halt_reason
+
+
+def test_guarded_broker_blocks_then_allows():
+    g = RiskGuardian(10_000, RiskLimits())
+    gb = GuardedBroker(get_broker("paper"), g)
+    gb.connect()
+    decision, result = gb.place_order(Order("X", OrderSide.BUY, 1, price=100, stop_loss=None))
+    assert not decision.allowed and result is None
+    decision2, result2 = gb.place_order(
+        Order("X", OrderSide.BUY, 1, price=100, stop_loss=99))
+    assert decision2.allowed and result2 is not None
+
+
+def test_attach_sl_tp_fills_missing_levels():
+    o = Order("X", OrderSide.BUY, 1, price=100)
+    attach_sl_tp(o, atr_value=2.0, direction="long", atr_stop_mult=2.0, rr=2.0)
+    assert o.stop_loss is not None and o.stop_loss < 100
+    assert o.take_profit is not None and o.take_profit > 100
+
+
+def test_agent_execute_is_guarded():
+    agent = TradingAgent()
+    plan = agent.trade_plan("AAPL")
+    msg = agent.execute_plan(plan, broker="paper")
+    assert "PAPER" in msg or "BLOCKED" in msg or "flat" in msg
+
+
+# --- patterns / co-pilot -------------------------------------------------
+def test_patterns_produce_insights():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=300).as_bars()
+    mi = analyze_patterns("BTC/USDT", bars)
+    assert mi.regime
+    assert "resistance" in mi.key_levels and "support" in mi.key_levels
+    assert mi.highlights
+    assert "CO-PILOT" in mi.to_text()
+
+
+# --- autotune: parameter proposals with guardrails ----------------------
+def test_autotuner_proposes_with_guardrails():
+    tuner = AutoTuner(min_improvement_pct=10.0, require_robust=True)
+    bot = BotConfig(name="t", symbol="BTC/USDT", strategy="ma_crossover",
+                    params={"fast": 50, "slow": 200})
+    prop = tuner.propose_params(bot, metric="total_return")
+    assert prop.best_params
+    # recommendation requires robust AND improvement AND a change
+    assert isinstance(prop.recommended, bool)
+    if prop.recommended:
+        assert prop.oos_robust and prop.improvement_pct >= 10.0
+
+
+def test_autotuner_monitor_dry_run():
+    tuner = AutoTuner()
+    bots = [BotConfig(name="a", symbol="AAPL", strategy="rsi_reversion",
+                      params={"period": 14, "low": 30, "high": 70})]
+    report = tuner.monitor(bots, apply=False)
+    assert "AUTO-TUNE SWEEP" in report and "DRY-RUN" in report
+
+
+def test_improve_code_no_path_is_safe():
+    agent = TradingAgent()
+    bot = BotConfig(name="x", symbol="AAPL", strategy="ma_crossover", params={})
+    proposal = agent.improve_bot_code(bot)        # no code_path -> safe no-op
+    assert not proposal.applied
+
+
+# --- knowledge corpus ----------------------------------------------------
+def test_corpus_has_builtin_and_retrieves():
+    c = KnowledgeCorpus()
+    assert len(c.documents) == len(BUILTIN_LESSONS)
+    hits = c.retrieve("risk of ruin position sizing", k=3)
+    assert hits and hits[0][1] > 0
+
+
+def test_corpus_ingest_and_persist(tmp_path):
+    c = KnowledgeCorpus()
+    n = c.ingest_text("London open breakout: trade the Asian range sweep.",
+                      title="my note", tags=["fx"])
+    assert n >= 1
+    p = tmp_path / "corpus.json"
+    c.save(str(p))
+    c2 = KnowledgeCorpus()
+    added = c2.load(str(p))
+    assert added >= 1
+    assert any("London" in d.content for d in c2.documents)
+
+
+def test_corpus_url_ingest_with_fetcher():
+    c = KnowledgeCorpus()
+    fake_fetch = lambda url: "Carry trade harvests interest rate differentials."
+    n = c.ingest_url("https://example.com/fx", fetcher=fake_fetch, tags=["fx"])
+    assert n >= 1
+    assert c.retrieve("carry interest differential", k=1)
+
+
+def test_agent_learn_and_ingest():
+    agent = TradingAgent()
+    msg = agent.ingest_knowledge(text="VWAP reversion is an institutional staple.",
+                                 title="note")
+    assert "Ingested" in msg
+    assert "VWAP" in agent.learn("vwap reversion")

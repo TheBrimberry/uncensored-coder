@@ -354,6 +354,11 @@ local LLM.
 - **Risk-managed plans** — ATR-normalized entry/stop/target, position sizing from your equity & risk %.
 - **News & events** — headline sentiment + macro/crypto catalyst calendar (FOMC, CPI, earnings, halvings, unlocks).
 - **Brokers** — uniform interface over **TradeLocker, MetaTrader5, ccxt, Alpaca** — **paper/dry-run by default**.
+- **Account guardian** — hard risk firewall: every order needs a stop, with per-trade / daily-loss / drawdown circuit breakers so you **don't blow up the account**.
+- **Performance review** — ingest your past trades (CSV/JSON/broker/backtest) and get a diagnosis of *what's actually losing you money* with concrete fixes.
+- **Live bot improvement** — auto-tune bot **parameters** (walk-forward-gated) *and* propose **code edits** to the strategy file (backed up, dry-run by default).
+- **Co-pilot insights** — highlight market structure, key levels, candle/divergence patterns and plain-language insights side by side.
+- **Deep knowledge corpus** — a dense, curated quant body of knowledge (microstructure, smart-money, session edges, risk-of-ruin math, options/crypto edges, backtest traps) that you can **grow by ingesting your own notes and sources**.
 - **Knowledge base** — queryable catalogue of real trading repos + strategy families + non-negotiable risk principles.
 
 ### Usage
@@ -379,6 +384,22 @@ python trade.py BTC/USDT --optimize ma_crossover --metric sharpe
 
 # Out-of-sample walk-forward validation (FRAGILE vs ROBUST verdict)
 python trade.py AAPL --walk-forward rsi_reversion
+
+# Co-pilot: highlight patterns, key levels and insights
+python trade.py BTC/USDT --insights
+
+# Review your past trading data and get a diagnosis (CSV or JSON)
+python trade.py --review examples/sample_trades.csv
+
+# Retrieve deep quant knowledge on any topic
+python trade.py --learn "crypto funding rate squeeze"
+
+# Teach the agent your own research (file or folder); persists to ~/.trading_corpus.json
+python trade.py --ingest ./my_trading_notes/
+
+# Tune a bot's parameters (dry-run; add --apply to commit robust improvements)
+python trade.py --tune mybot.json --metric calmar
+python trade.py --tune mybot.json --apply
 
 # Broker connectivity smoke test (demo accounts; safe no-op without creds)
 python scripts/broker_smoke_test.py
@@ -406,6 +427,23 @@ print(agent.backtest("BTC/USDT", "ensemble").summary())  # historical validation
 print(agent.optimize("BTC/USDT", "ma_crossover").summary())      # grid search
 print(agent.walk_forward("AAPL", "rsi_reversion").summary())     # OOS robustness
 print(agent.ask("ETH/USDT", "swing or scalp?"))  # LLM-narrated read
+
+# Co-pilot, performance review, account guardian
+print(agent.insights("BTC/USDT").to_text())                      # patterns + levels
+print(agent.review_performance("examples/sample_trades.csv").to_text())
+print(agent.execute_plan(agent.trade_plan("AAPL")))   # guardian-protected paper order
+
+# Improve a bot live — parameters (walk-forward gated) AND code (LLM, backed up)
+from trading import BotConfig
+bot = BotConfig(name="fx", symbol="EURUSD", strategy="ma_crossover",
+                params={"fast": 50, "slow": 200}, code_path="my_strategy.py")
+proposal = agent.tune_bot(bot, metric="calmar", apply=True, path="fx.json")
+print(proposal.summary())
+print(agent.improve_bot_code(bot, performance_source="examples/sample_trades.csv").summary())
+
+# Teach it your own knowledge, then retrieve it
+agent.ingest_knowledge(file="my_notes.md", save_path="corpus.json")
+print(agent.learn("london open breakout"))
 
 # Execution is PAPER by default; live needs live=True + real credentials.
 plan = agent.trade_plan("BTC/USDT")
