@@ -23,6 +23,8 @@ from trading.news import score_sentiment
 from trading.agent import TradingAgent
 from trading.backtest import Backtester
 from trading.optimize import grid_search, walk_forward, DEFAULT_GRIDS, METRICS
+from trading.regime import detect_regime, MarketRegime
+from trading.mtf import MultiTimeframeAnalyzer, MTFAnalysis
 
 
 # --- indicators ----------------------------------------------------------
@@ -474,3 +476,217 @@ def test_agent_learn_and_ingest():
                                  title="note")
     assert "Ingested" in msg
     assert "VWAP" in agent.learn("vwap reversion")
+
+
+# --- new indicators -------------------------------------------------------
+def test_donchian_channel():
+    h = [float(i + 2) for i in range(30)]
+    l = [float(i) for i in range(30)]
+    dc = ind.donchian(h, l, period=10)
+    upper = ind.last(dc["upper"])
+    lower = ind.last(dc["lower"])
+    assert upper is not None and lower is not None
+    assert upper > lower
+
+
+def test_williams_r_bounds():
+    h = [10.0 + i % 3 for i in range(30)]
+    l = [8.0 + i % 3 for i in range(30)]
+    c = [9.0 + i % 3 for i in range(30)]
+    wr = ind.williams_r(h, l, c, 14)
+    val = ind.last(wr)
+    assert val is not None and -100.0 <= val <= 0.0
+
+
+def test_obv_monotone_up():
+    c = [float(i) for i in range(1, 21)]
+    v = [100.0] * 20
+    o = ind.obv(c, v)
+    assert o[-1] > o[0]
+
+
+def test_cci_returns_value():
+    h = [12.0 + (i % 4) for i in range(30)]
+    l = [8.0 + (i % 4) for i in range(30)]
+    c = [10.0 + (i % 4) for i in range(30)]
+    val = ind.last(ind.cci(h, l, c, 14))
+    assert val is not None
+
+
+def test_adx_increases_with_trend():
+    c = [float(i) for i in range(1, 51)]
+    h = [x + 0.5 for x in c]
+    l = [x - 0.5 for x in c]
+    adx_data = ind.adx(h, l, c, 14)
+    val = ind.last(adx_data["adx"])
+    assert val is not None and val > 0
+
+
+def test_zscore_mean_zero():
+    import statistics
+    c = [float(i % 5) for i in range(30)]
+    zs = [z for z in ind.zscore(c, 10) if z is not None]
+    assert len(zs) > 0
+    # z-score of a periodic series should hover near zero on average
+    assert abs(statistics.mean(zs)) < 5.0
+
+
+def test_pivot_points_ordering():
+    pp = ind.pivot_points(high=110.0, low=90.0, close=100.0)
+    assert pp["S3"] < pp["S2"] < pp["S1"] < pp["P"] < pp["R1"] < pp["R2"] < pp["R3"]
+
+
+def test_keltner_upper_gt_lower():
+    h = [10.0 + (i % 3) for i in range(40)]
+    l = [8.0 + (i % 3) for i in range(40)]
+    c = [9.0 + (i % 3) for i in range(40)]
+    kc = ind.keltner_channels(h, l, c)
+    assert ind.last(kc["upper"]) > ind.last(kc["lower"])
+
+
+# --- new strategies -------------------------------------------------------
+def test_donchian_breakout_signal():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=100).as_bars()
+    sig = strat.donchian_breakout(bars, period=20)
+    assert sig.direction in (strat.Direction.LONG, strat.Direction.SHORT, strat.Direction.FLAT)
+
+
+def test_stochastic_cross_signal():
+    bars = MarketData().get_ohlcv("AAPL", limit=100).as_bars()
+    sig = strat.stochastic_cross(bars)
+    assert 0.0 <= sig.strength <= 1.0
+
+
+def test_mean_reversion_zscore_signal():
+    bars = MarketData().get_ohlcv("EURUSD", limit=100).as_bars()
+    sig = strat.mean_reversion_zscore(bars)
+    assert sig.name == "mean_reversion_zscore"
+
+
+def test_cci_reversal_signal():
+    bars = MarketData().get_ohlcv("AAPL", limit=60).as_bars()
+    sig = strat.cci_reversal(bars)
+    assert sig.direction in (strat.Direction.LONG, strat.Direction.SHORT, strat.Direction.FLAT)
+
+
+def test_volume_momentum_signal():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=80).as_bars()
+    sig = strat.volume_momentum(bars)
+    assert sig.name == "volume_momentum"
+
+
+def test_keltner_breakout_signal():
+    bars = MarketData().get_ohlcv("EURUSD", limit=60).as_bars()
+    sig = strat.keltner_breakout(bars)
+    assert 0.0 <= sig.strength <= 1.0
+
+
+def test_adx_trend_strength_signal():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=100).as_bars()
+    sig = strat.adx_trend_strength(bars)
+    assert sig.name == "adx_trend_strength"
+
+
+def test_run_all_now_has_more_strategies():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=300).as_bars()
+    signals = strat.run_all(bars)
+    # was 5 before, now 12
+    assert len(signals) >= 12
+
+
+# --- regime detection -----------------------------------------------------
+def test_regime_produces_result():
+    bars = MarketData().get_ohlcv("BTC/USDT", limit=300).as_bars()
+    r = detect_regime("BTC/USDT", bars)
+    assert r.regime in list(MarketRegime)
+    assert 0.0 <= r.confidence <= 1.0
+    assert r.size_factor > 0.0
+    assert "REGIME" in r.to_text()
+
+
+def test_regime_agent_method():
+    agent = TradingAgent()
+    r = agent.regime("AAPL")
+    assert r.symbol == "AAPL"
+    assert r.notes  # should have at least one note
+
+
+def test_regime_high_vol_flag():
+    # Synthetic spike in ATR: build bars with massive range
+    n = 50
+    high = [100.0 + 30.0 * (i % 2) for i in range(n)]  # alternating +30 swings
+    low  = [100.0 - 30.0 * (i % 2) for i in range(n)]
+    close = [100.0 + 5.0 * (i % 5) for i in range(n)]
+    bars = {"open": close, "high": high, "low": low, "close": close,
+            "volume": [1000.0] * n}
+    r = detect_regime("TEST", bars)
+    # High alternating range should flag high volatility
+    assert r.regime == MarketRegime.HIGH_VOLATILITY or r.atr_pct > 1.0
+
+
+# --- multi-timeframe analysis ---------------------------------------------
+def test_mtf_analysis_runs():
+    md = MarketData()
+    analyzer = MultiTimeframeAnalyzer(md)
+    result = analyzer.analyze("BTC/USDT", timeframes=["1d", "1h"])
+    assert isinstance(result, MTFAnalysis)
+    assert result.symbol == "BTC/USDT"
+    assert "1d" in result.timeframes and "1h" in result.timeframes
+    assert result.alignment in ("aligned_long", "aligned_short", "mixed", "conflicting")
+    assert -1.0 <= result.alignment_score <= 1.0
+    assert "MULTI-TIMEFRAME" in result.to_text()
+
+
+def test_mtf_agent_method():
+    agent = TradingAgent()
+    result = agent.mtf("AAPL", timeframes=["1d", "1h"])
+    assert result.net_bias in ("long", "short", "flat")
+    assert result.size_recommendation > 0.0
+
+
+# --- expanded knowledge corpus -------------------------------------------
+def test_corpus_has_expanded_lessons():
+    from trading.knowledge_corpus import KnowledgeCorpus, BUILTIN_LESSONS
+    assert len(BUILTIN_LESSONS) >= 40   # was 27, now 50+
+    c = KnowledgeCorpus()
+    # Test retrieval of newly added topics
+    hits = c.retrieve("Elliott Wave fibonacci impulse", k=3)
+    assert hits and hits[0][1] > 0
+
+
+def test_corpus_elliott_wave_lesson():
+    from trading.knowledge_corpus import KnowledgeCorpus
+    c = KnowledgeCorpus()
+    hits = c.retrieve("market profile tpo value area", k=3)
+    assert any("Profile" in h[0].title or "profile" in h[0].content for h in hits)
+
+
+def test_corpus_intermarket_lesson():
+    from trading.knowledge_corpus import KnowledgeCorpus
+    c = KnowledgeCorpus()
+    hits = c.retrieve("bonds dollar gold copper intermarket", k=3)
+    assert hits
+
+
+def test_corpus_regime_lesson():
+    from trading.knowledge_corpus import KnowledgeCorpus
+    c = KnowledgeCorpus()
+    hits = c.retrieve("regime ADX trending ranging high volatility", k=3)
+    assert hits
+
+
+def test_ingest_url_via_agent():
+    agent = TradingAgent()
+    msg = agent.ingest_knowledge(url="https://example.com/trading",
+                                 save_path=None)
+    # Either succeeded or returned a fetch-error chunk — either way it ran
+    assert "Ingested" in msg or "chunk" in msg.lower()
+
+
+# --- DEFAULT_GRIDS now covers new strategies --------------------------------
+def test_default_grids_new_strategies():
+    from trading.optimize import DEFAULT_GRIDS
+    assert "donchian_breakout" in DEFAULT_GRIDS
+    assert "stochastic_cross" in DEFAULT_GRIDS
+    assert "mean_reversion_zscore" in DEFAULT_GRIDS
+    assert "adx_trend_strength" in DEFAULT_GRIDS

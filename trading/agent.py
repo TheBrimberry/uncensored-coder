@@ -25,9 +25,11 @@ from .journal import TradeJournal, PerformanceReport
 from .knowledge_base import KnowledgeBase
 from .knowledge_corpus import KnowledgeCorpus
 from .market_data import _looks_like_crypto
+from .mtf import MultiTimeframeAnalyzer, MTFAnalysis
 from .optimize import grid_search, walk_forward, GridResult, WalkForwardResult, DEFAULT_GRIDS
 from .patterns import analyze_patterns, MarketInsights
 from .prompts import TRADING_SYSTEM_PROMPT, build_analysis_prompt
+from .regime import detect_regime, RegimeResult
 from .risk import TradePlan
 
 
@@ -47,6 +49,7 @@ class TradingAgent:
         self.risk_pct = risk_pct
         self.guardian = RiskGuardian(account_equity, risk_limits)
         self.tuner = AutoTuner(market_data=self.engine.md)
+        self.mtf_analyzer = MultiTimeframeAnalyzer(self.engine.md)
         self._model_name = model
         self._loader = None  # lazily initialized
 
@@ -106,6 +109,17 @@ class TradingAgent:
         """Side-by-side co-pilot: highlight patterns, levels and key insights."""
         data = self.engine.md.get_ohlcv(symbol, timeframe)
         return analyze_patterns(symbol, data.as_bars())
+
+    def regime(self, symbol: str, timeframe: str = "1d") -> RegimeResult:
+        """Classify the current market regime (trending/ranging/high-vol) and
+        return a recommended position-size multiplier."""
+        data = self.engine.md.get_ohlcv(symbol, timeframe)
+        return detect_regime(symbol, data.as_bars())
+
+    def mtf(self, symbol: str, timeframes=None, limit: int = 300) -> MTFAnalysis:
+        """Multi-timeframe analysis: run ensemble strategy across timeframes and
+        report alignment. Fully aligned = high conviction; conflicting = wait."""
+        return self.mtf_analyzer.analyze(symbol, timeframes=timeframes, limit=limit)
 
     def ask(self, symbol: str, question: Optional[str] = None,
             timeframe: str = "1d", horizon: int = 5) -> str:
@@ -217,9 +231,10 @@ class TradingAgent:
         return self.corpus.as_prompt_context(query, k=k) or "No matching knowledge."
 
     def ingest_knowledge(self, *, text: Optional[str] = None, file: Optional[str] = None,
-                         directory: Optional[str] = None, title: str = "note",
-                         tags: Optional[list] = None, save_path: Optional[str] = None) -> str:
-        """Teach the agent: ingest your own notes / files / a folder of research."""
+                         directory: Optional[str] = None, url: Optional[str] = None,
+                         title: str = "note", tags: Optional[list] = None,
+                         save_path: Optional[str] = None) -> str:
+        """Teach the agent: ingest your own notes / files / a folder / a URL."""
         added = 0
         if text:
             added += self.corpus.ingest_text(text, title=title, tags=tags)
@@ -227,6 +242,39 @@ class TradingAgent:
             added += self.corpus.ingest_file(file, tags=tags)
         if directory:
             added += self.corpus.ingest_directory(directory, tags=tags)
+        if url:
+            added += self.corpus.ingest_url(url, fetcher=self._fetch_url, tags=tags)
         if save_path:
             self.corpus.save(save_path)
         return f"Ingested {added} chunk(s). {self.corpus.stats()}"
+
+    def _fetch_url(self, url: str) -> str:
+        """Fetch URL text via the project's model loader / WebFetch, or urllib."""
+        try:
+            import urllib.request
+            req = urllib.request.Request(url, headers={"User-Agent": "TradingAgent/2.0"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                raw = r.read().decode("utf-8", errors="ignore")
+            # Strip HTML tags crudely
+            import re
+            raw = re.sub(r"<[^>]+>", " ", raw)
+            raw = re.sub(r"\s{2,}", " ", raw)
+            return raw[:50_000]
+        except Exception as e:
+            return f"[fetch error: {e}]"
+
+    def monitor_bots_daemon(self, bots, path_for: Optional[dict] = None,
+                            metric: str = "calmar", apply: bool = False,
+                            interval_minutes: float = 60.0) -> None:
+        """Run the bot-tuning sweep once immediately, then on a schedule.
+        Blocks the calling thread — run in a subprocess or background thread."""
+        import time
+        interval_sec = interval_minutes * 60
+        while True:
+            try:
+                summary = self.monitor_bots(bots, path_for=path_for,
+                                            metric=metric, apply=apply)
+                print(summary, flush=True)
+            except Exception as e:  # noqa: BLE001
+                print(f"[monitor_bots_daemon] error: {e}", flush=True)
+            time.sleep(interval_sec)

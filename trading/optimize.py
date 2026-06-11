@@ -191,4 +191,11 @@ DEFAULT_GRIDS: Dict[str, Dict[str, List]] = {
     "macd_momentum": {},
     "supertrend_follow": {"period": [7, 10, 14], "multiplier": [2.0, 3.0, 4.0]},
     "ensemble": {},
+    "donchian_breakout": {"period": [10, 20, 40, 55]},
+    "stochastic_cross": {"k_period": [9, 14, 21], "d_period": [3, 5]},
+    "mean_reversion_zscore": {"period": [10, 20, 30], "threshold": [1.5, 2.0, 2.5]},
+    "cci_reversal": {"period": [14, 20], "threshold": [100.0, 150.0]},
+    "volume_momentum": {},
+    "keltner_breakout": {"ema_period": [14, 20], "atr_period": [7, 10], "multiplier": [1.5, 2.0, 2.5]},
+    "adx_trend_strength": {"period": [10, 14], "threshold": [20.0, 25.0, 30.0]},
 }

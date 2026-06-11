@@ -34,6 +34,8 @@ from .bot import BotConfig
 from .autotune import AutoTuner, TuneProposal, CodeProposal
 from .guardian import RiskGuardian, RiskLimits, GuardedBroker, GuardianState, attach_sl_tp
 from .patterns import analyze_patterns, MarketInsights, Pattern
+from .regime import detect_regime, RegimeResult, MarketRegime
+from .mtf import MultiTimeframeAnalyzer, MTFAnalysis, MTFSignal
 
 __all__ = [
     "TradingAgent",
@@ -69,6 +71,12 @@ __all__ = [
     "analyze_patterns",
     "MarketInsights",
     "Pattern",
+    "detect_regime",
+    "RegimeResult",
+    "MarketRegime",
+    "MultiTimeframeAnalyzer",
+    "MTFAnalysis",
+    "MTFSignal",
 ]
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"

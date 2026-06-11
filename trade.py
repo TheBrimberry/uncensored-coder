@@ -57,6 +57,13 @@ def run_once(args):
     elif args.insights:
         out(agent.insights(args.symbol, timeframe=args.timeframe).to_text(),
             title=f"Co-pilot: {args.symbol}", style="cyan")
+    elif args.regime:
+        out(agent.regime(args.symbol, timeframe=args.timeframe).to_text(),
+            title=f"Regime: {args.symbol}", style="yellow")
+    elif args.mtf:
+        tfs = [t.strip() for t in args.mtf.split(",")] if args.mtf != "default" else None
+        out(agent.mtf(args.symbol, timeframes=tfs).to_text(),
+            title=f"Multi-TF: {args.symbol}", style="cyan")
     elif args.no_llm:
         report = agent.analyze(args.symbol, timeframe=args.timeframe,
                                horizon=args.forecast)
@@ -123,10 +130,20 @@ def main():
     p.add_argument("--knowledge", "-k", nargs="?", const="", help="Dump knowledge base")
     p.add_argument("--learn", help="Retrieve deep knowledge for a topic/question")
     p.add_argument("--ingest", help="Teach the agent: ingest a file or directory of notes")
+    p.add_argument("--ingest-url", help="Fetch and ingest a URL into the knowledge corpus")
     p.add_argument("--review", help="Review past trading data (CSV or JSON of trades)")
     p.add_argument("--tune", help="Tune a bot's parameters from its JSON config file")
     p.add_argument("--apply", action="store_true",
-                   help="With --tune: apply the change if robust & improving (else dry-run)")
+                   help="With --tune/--monitor-bots: apply changes if robust (else dry-run)")
+    p.add_argument("--regime", action="store_true",
+                   help="Detect and report the current market regime (trending/ranging/high-vol)")
+    p.add_argument("--mtf", nargs="?", const="default",
+                   help="Multi-timeframe analysis; optionally pass comma-separated TFs "
+                        "(e.g. '1w,1d,4h') or omit for defaults (1w,1d,4h,1h)")
+    p.add_argument("--monitor-bots", metavar="BOT_CONFIGS",
+                   help="Comma-separated paths to BotConfig JSON files to sweep on a schedule")
+    p.add_argument("--monitor-interval", type=float, default=60.0,
+                   help="Interval in minutes between monitor-bots sweeps (default: 60)")
     args = p.parse_args()
 
     _banner()
@@ -145,6 +162,12 @@ def main():
                                      save_path=os.path.expanduser("~/.trading_corpus.json"))
         out(msg, title="Ingest")
         return
+    if args.ingest_url:
+        agent = TradingAgent()
+        msg = agent.ingest_knowledge(url=args.ingest_url,
+                                     save_path=os.path.expanduser("~/.trading_corpus.json"))
+        out(msg, title=f"Ingest URL: {args.ingest_url}")
+        return
     if args.review:
         out(TradingAgent().review_performance(args.review).to_text(),
             title=f"Performance: {args.review}", style="magenta")
@@ -157,6 +180,16 @@ def main():
                                   path=args.tune if args.apply else None)
         out(proposal.summary(), title=f"Tune: {bot.name}", style="yellow")
         return
+    if args.monitor_bots:
+        from trading import BotConfig
+        agent = TradingAgent()
+        bots = [BotConfig.load(p) for p in args.monitor_bots.split(",")]
+        interval = args.monitor_interval
+        out(f"Starting monitor daemon — sweeping {len(bots)} bot(s) every {interval}min.",
+            style="cyan")
+        agent.monitor_bots_daemon(bots, metric=args.metric, apply=args.apply,
+                                  interval_minutes=interval)
+        return  # blocks until Ctrl-C
     if args.interactive:
         run_interactive(args)
         return
