@@ -34,6 +34,9 @@ models/*.gguf
 *.swo
 *~
 
+# Netlify CLI local state
+.netlify/
+
 # OS
 .DS_Store
 Thumbs.db
