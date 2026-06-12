@@ -48,6 +48,29 @@ const FALLBACK_DATA = (() => {
     ['injective-protocol', 'Injective', 'inj', 27.4, 20, 1.2, 7.3, 25.6, 2700000000, 240000000, '#00d2ff'],
   ];
 
+  // Static fallbacks for the auxiliary endpoints.
+  window.FALLBACK_GLOBAL = {
+    data: {
+      total_market_cap: { usd: 2380000000000 },
+      total_volume: { usd: 96000000000 },
+      market_cap_change_percentage_24h_usd: 1.9,
+      market_cap_percentage: { btc: 55.4, eth: 17.8 },
+      active_cryptocurrencies: 13412,
+    },
+  };
+  window.FALLBACK_FNG = { data: [{ value: '64', value_classification: 'Greed' }] };
+  window.FALLBACK_TRENDING = {
+    coins: [
+      { item: { id: 'solana', name: 'Solana', symbol: 'SOL', market_cap_rank: 4, data: { price_change_percentage_24h: { usd: 5.2 } } } },
+      { item: { id: 'injective-protocol', name: 'Injective', symbol: 'INJ', market_cap_rank: 20, data: { price_change_percentage_24h: { usd: 7.3 } } } },
+      { item: { id: 'dogecoin', name: 'Dogecoin', symbol: 'DOGE', market_cap_rank: 8, data: { price_change_percentage_24h: { usd: 8.9 } } } },
+      { item: { id: 'chainlink', name: 'Chainlink', symbol: 'LINK', market_cap_rank: 10, data: { price_change_percentage_24h: { usd: 4.4 } } } },
+      { item: { id: 'near', name: 'NEAR Protocol', symbol: 'NEAR', market_cap_rank: 17, data: { price_change_percentage_24h: { usd: 3.9 } } } },
+      { item: { id: 'aave', name: 'Aave', symbol: 'AAVE', market_cap_rank: 16, data: { price_change_percentage_24h: { usd: 5.8 } } } },
+      { item: { id: 'shiba-inu', name: 'Shiba Inu', symbol: 'SHIB', market_cap_rank: 14, data: { price_change_percentage_24h: { usd: 12.5 } } } },
+    ],
+  };
+
   return seed.map(([id, name, symbol, price, rank, ch1h, ch24h, ch7d, mcap, vol, color], i) => ({
     id, name, symbol, current_price: price, market_cap_rank: rank,
     price_change_percentage_1h_in_currency: ch1h,
