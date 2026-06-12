@@ -325,3 +325,93 @@ img.coin-ico { object-fit: cover; }
   .hero__stats { gap: 1.2rem; }
   .nav__actions .btn--ghost { display: none; }
 }
+
+/* ===== Market Pulse ===== */
+.pulse__cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.4rem; }
+.pcard2 { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem 1.3rem; }
+.pcard2 span { color: var(--muted); font-size: .82rem; display: block; }
+.pcard2 b { font-size: 1.7rem; font-weight: 800; display: block; margin: .3rem 0 .2rem; }
+.pulse__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+.pulsetable { padding: 1rem; }
+.mini { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.mini td { padding: .4rem .3rem; border-bottom: 1px solid rgba(30,42,56,.5); white-space: nowrap; }
+.mini tr:last-child td { border-bottom: none; }
+.mini tr { cursor: pointer; }
+.mini tr:hover td { background: rgba(255,255,255,.02); }
+.mini__rank { color: var(--muted); width: 1.2rem; }
+.mini__coin { display: flex; align-items: center; gap: .4rem; }
+.mini__coin .coin-ico { width: 18px; height: 18px; }
+.mini .num { text-align: right; }
+.mini__hide { color: var(--muted); }
+
+/* ===== Smart picks ===== */
+.smart__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.card--explode { border-color: rgba(45,212,191,.35); }
+.srow { display: grid; grid-template-columns: auto 1fr auto; gap: .8rem; align-items: center; padding: .55rem .3rem; border-bottom: 1px solid rgba(30,42,56,.5); cursor: pointer; }
+.srow:last-child { border-bottom: none; }
+.srow:hover { background: rgba(255,255,255,.02); }
+.srow__coin { display: flex; align-items: center; gap: .45rem; min-width: 70px; }
+.srow__coin .coin-ico { width: 20px; height: 20px; }
+.srow__mid { display: flex; flex-direction: column; gap: .25rem; }
+.srow__mid small { font-size: .72rem; }
+.vmeter { position: relative; height: 6px; background: linear-gradient(90deg, var(--green), var(--muted) 50%, var(--red)); border-radius: 4px; opacity: .55; }
+.vmeter span { position: absolute; top: -3px; width: 12px; height: 12px; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--bg); }
+.ebar { height: 7px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.ebar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); }
+.escore { font-weight: 800; font-size: 1.05rem; color: var(--accent); min-width: 28px; text-align: right; }
+
+/* ===== Top picks ===== */
+.picks__tabs { display: flex; gap: .4rem; }
+.ptab { background: var(--panel); border: 1px solid var(--border); color: var(--muted); padding: .45rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .88rem; }
+.ptab.active { background: rgba(22,199,132,.12); color: var(--green); border-color: rgba(22,199,132,.4); }
+.picks__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+.pick { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; cursor: pointer; transition: .2s; }
+.pick:hover { border-color: var(--accent); transform: translateY(-3px); }
+.pick__head { display: flex; align-items: center; gap: .5rem; margin-bottom: .7rem; }
+.pick__head .coin-ico { width: 24px; height: 24px; }
+.pick__rank { font-size: .72rem; font-weight: 700; color: var(--accent); background: rgba(45,212,191,.1); padding: .15rem .45rem; border-radius: 6px; }
+.pick__conv { margin-left: auto; color: var(--yellow); font-size: .8rem; }
+.pick__thesis { font-size: .85rem; color: var(--muted); margin: 0 0 .9rem; min-height: 3.4em; }
+.pick__rows { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pick__rows > div { background: var(--panel-2); border-radius: 8px; padding: .45rem .6rem; }
+.pick__rows span { color: var(--muted); font-size: .72rem; display: block; }
+.pick__rows b { font-size: .88rem; }
+
+/* ===== Discover ===== */
+.discover__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; }
+.tag--soon { background: rgba(45,212,191,.15); color: var(--accent); }
+.hype { height: 6px; background: var(--panel-2); border-radius: 4px; overflow: hidden; width: 56px; margin-left: auto; }
+.hype span { display: block; height: 100%; background: linear-gradient(90deg, var(--yellow), var(--green)); }
+
+/* ===== Articles ===== */
+.articles__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; margin-bottom: 2rem; }
+.article { display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; transition: .2s; }
+.article:hover { border-color: var(--accent); transform: translateY(-3px); }
+.article__top { display: flex; justify-content: space-between; align-items: center; font-size: .78rem; margin-bottom: .5rem; }
+.article h4 { font-size: 1rem; margin-bottom: .5rem; }
+.article p { font-size: .85rem; margin: 0 0 1rem; flex: 1; }
+.article__date { font-size: .78rem; }
+.edu__subhead { font-size: 1.1rem; margin-bottom: 1rem; }
+
+/* ===== Arbitrage board ===== */
+.arb__base, .arb__slider { display: inline-flex; align-items: center; gap: .5rem; font-size: .85rem; color: var(--muted); }
+.arb__slider input[type=range] { accent-color: var(--green); width: 130px; }
+.arb__slider b { color: var(--green); }
+.arb__base .input { padding: .4rem .6rem; }
+.arb__board-meta { font-size: .82rem; margin-bottom: .8rem; }
+.arb__deep-title { font-size: 1.15rem; margin: 2rem 0 .8rem; }
+.arb__controls--deep { margin-bottom: 1rem; }
+.ex-tag { font-size: .78rem; font-weight: 600; padding: .2rem .55rem; border-radius: 6px; }
+.ex-tag--buy { background: rgba(234,57,67,.12); color: #ff7a82; }
+.ex-tag--sell { background: rgba(22,199,132,.12); color: var(--green); }
+
+/* ===== Responsive (extras) ===== */
+@media (max-width: 1100px) {
+  .pulse__grid { grid-template-columns: repeat(2, 1fr); }
+  .picks__grid, .articles__grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 900px) {
+  .pulse__cards, .smart__grid, .discover__grid { grid-template-columns: 1fr; }
+  .pulse__grid, .picks__grid, .articles__grid { grid-template-columns: 1fr; }
+  .arb__controls { flex-wrap: wrap; }
+}

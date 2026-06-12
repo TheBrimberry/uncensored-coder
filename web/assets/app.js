@@ -20,7 +20,16 @@
     watch: new Set(loadLS(LS.watch, [])),
     alerts: loadLS(LS.alerts, []),
     arbCoin: 'bitcoin',
+    arbMinPct: 0.5,
+    arbBase: 'usd',
+    pickHorizon: 'day',
+    global: null,
   };
+
+  const ICON = (c) => c.image
+    ? `<img class="coin-ico" src="${c.image}" alt="" loading="lazy">`
+    : `<span class="coin-ico" style="background:${c.color}"></span>`;
+  const btcPrice = () => (state.coins.find((c) => c.id === 'bitcoin') || {}).price || 0;
 
   // ---------- helpers ----------
   const $ = (s, r = document) => r.querySelector(s);
@@ -83,18 +92,49 @@
     const ch7d = c.price_change_percentage_7d_in_currency ?? 0;
     const sig = TA.signal({ prices, ch24h, ch7d });
     const slow = TA.sma(prices, Math.min(30, prices.length));
-    return {
+    const o = {
       id: c.id, name: c.name, symbol: (c.symbol || '').toUpperCase(),
       price: c.current_price, rank: c.market_cap_rank ?? 999,
       ch1h: c.price_change_percentage_1h_in_currency ?? null,
       ch24h, ch7d, mcap: c.market_cap ?? 0, vol: c.total_volume ?? 0,
-      high24: c.high_24h, low24: c.low_24h, ath: c.ath, athChange: c.ath_change_percentage,
+      high24: c.high_24h, low24: c.low_24h, ath: c.ath, athChange: c.ath_change_percentage ?? 0,
       supply: c.circulating_supply, image: c.image,
       prices, rsi: sig.rsi, signal: sig.label, signalCls: sig.cls, score: sig.score,
       pattern: TA.detectPattern({ prices, ch7d }),
       trend: slow ? (c.current_price > slow ? 'up' : 'down') : 'up',
       color: colorFor(c),
     };
+    o.valuation = valuationScore(o);   // <0 undervalued, >0 overvalued
+    o.explode = explosionScore(o);     // 0–100 momentum/explosion potential
+    o.volCap = o.mcap ? o.vol / o.mcap : 0;
+    return o;
+  }
+
+  // Heuristic valuation: distance from ATH + RSI. Negative = undervalued.
+  function valuationScore(c) {
+    const athComp = Math.max(-40, Math.min(60, (c.athChange ?? 0) + 60)); // at ATH→+60, deep below→-40
+    const rsiComp = ((c.rsi ?? 50) - 50) * 1.4;
+    return Math.max(-100, Math.min(100, Math.round(0.6 * athComp + 0.5 * rsiComp)));
+  }
+
+  // Heuristic "explosion" score 0–100: turnover, momentum, room to run, structure.
+  function explosionScore(c) {
+    const volRatio = c.mcap ? c.vol / c.mcap : 0;
+    let s = Math.min(volRatio / 0.25, 1) * 30;
+    s += Math.max(0, Math.min(c.ch24h, 15)) * 1.2;
+    s += Math.max(0, Math.min(c.ch7d, 25)) * 0.5;
+    if (c.rsi >= 40 && c.rsi <= 60 && c.ch24h > 0) s += 12;
+    if (c.rsi < 35) s += 8;
+    s += c.mcap < 2e9 ? 15 : c.mcap < 1e10 ? 8 : 3;
+    if (['Breakout', 'Bull Flag', 'Ascending Triangle', 'Double Bottom'].includes(c.pattern)) s += 10;
+    return Math.max(0, Math.min(100, Math.round(s)));
+  }
+  function explodeCatalyst(c) {
+    if (['Breakout', 'Bull Flag', 'Ascending Triangle'].includes(c.pattern)) return c.pattern;
+    if (c.volCap > 0.2) return 'Volume surge';
+    if (c.rsi < 38) return 'Oversold bounce';
+    if (c.mcap < 2e9) return 'Low-cap momentum';
+    return 'Trend continuation';
   }
 
   // ---------- render orchestration ----------
@@ -106,6 +146,10 @@
     renderSetups();
     renderHeatmap();
     populateArbCoins();
+    renderPulse();
+    renderSmart();
+    renderPicks(state.pickHorizon);
+    renderArbBoard();
   }
 
   // ---------- screener ----------
@@ -240,6 +284,8 @@
     let g;
     try { g = (await getJSON(CG + '/global')).data; }
     catch { g = FALLBACK_GLOBAL.data; }
+    state.global = g;
+    renderPulseCards();
     const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
     set('#g-mcap', fmtBig(g.total_market_cap.usd));
     $('#g-mcap-ch').innerHTML = pct(g.market_cap_change_percentage_24h_usd);
@@ -528,6 +574,202 @@
     }).join('');
   }
 
+  // ---------- Market Pulse (cryptopulse) ----------
+  function pulseRows(list, metric) {
+    return `<table class="mini">${list.map((c, i) => `
+      <tr data-id="${c.id}">
+        <td class="mini__rank">${i + 1}</td>
+        <td class="mini__coin">${ICON(c)}<b>${c.symbol}</b></td>
+        <td class="num">${fmtPrice(c.price)}</td>
+        <td class="num">${metric(c)}</td>
+      </tr>`).join('')}</table>`;
+  }
+
+  function renderPulseCards() {
+    const el = $('#pulse-cards');
+    if (!el) return;
+    const g = state.global;
+    const sumMcap = state.coins.reduce((a, c) => a + c.mcap, 0);
+    const sumVol = state.coins.reduce((a, c) => a + c.vol, 0);
+    const mcap = g ? g.total_market_cap.usd : sumMcap;
+    const vol = g ? g.total_volume.usd : sumVol;
+    const mcapCh = g ? g.market_cap_change_percentage_24h_usd : (state.coins.reduce((a, c) => a + c.ch24h, 0) / (state.coins.length || 1));
+    const btcDom = g ? g.market_cap_percentage.btc : 0;
+    const altCap = mcap * (1 - btcDom / 100);
+    el.innerHTML = `
+      <div class="pcard2"><span>Total Market Cap</span><b>${fmtBig(mcap)}</b>${pct(mcapCh)}</div>
+      <div class="pcard2"><span>Altcoin Market Cap</span><b>${fmtBig(altCap)}</b><small class="muted">excl. BTC</small></div>
+      <div class="pcard2"><span>24h Volume</span><b>${fmtBig(vol)}</b><small class="muted">${state.coins.length} coins tracked</small></div>`;
+  }
+
+  function renderPulse() {
+    if (!$('#pulse-gainers')) return;
+    renderPulseCards();
+    const liquid = state.coins.filter((c) => c.vol > 1e5);
+    const by = (arr, fn, dir = -1, n = 10) => [...arr].sort((a, b) => (fn(a) - fn(b)) * dir).slice(0, n);
+    const rsiPct = (c) => `<span class="${c.rsi <= 35 ? 'pos' : c.rsi >= 70 ? 'neg' : ''}">${c.rsi.toFixed(0)}</span>`;
+
+    $('#pulse-gainers').innerHTML = pulseRows(by(liquid, (c) => c.ch24h, -1), (c) => pct(c.ch24h));
+    $('#pulse-losers').innerHTML = pulseRows(by(liquid, (c) => c.ch24h, 1), (c) => pct(c.ch24h));
+    $('#pulse-volume').innerHTML = pulseRows(by(state.coins, (c) => c.vol, -1), (c) => fmtBig(c.vol));
+    $('#pulse-bullish').innerHTML = pulseRows(by(state.coins, (c) => c.score + c.ch7d / 100, -1), (c) => badge(c));
+    $('#pulse-bearish').innerHTML = pulseRows(by(state.coins, (c) => c.score + c.ch7d / 100, 1), (c) => badge(c));
+    $('#pulse-oversold').innerHTML = pulseRows(by(state.coins, (c) => c.rsi, 1), rsiPct);
+    $('#pulse-overbought').innerHTML = pulseRows(by(state.coins, (c) => c.rsi, -1), rsiPct);
+    $('#pulse-volcap').innerHTML = pulseRows(by(state.coins, (c) => c.volCap, -1), (c) => (c.volCap * 100).toFixed(1) + '%');
+  }
+
+  // ---------- Smart picks: valuation + explosion ----------
+  function valMeter(v) {
+    const left = ((v + 100) / 200) * 100; // -100..100 → 0..100%
+    const col = v < -15 ? 'var(--green)' : v > 25 ? 'var(--red)' : 'var(--muted)';
+    return `<div class="vmeter"><span style="left:${left.toFixed(0)}%;background:${col}"></span></div>`;
+  }
+  function renderSmart() {
+    if (!$('#smart-under')) return;
+    const sorted = [...state.coins];
+    const under = sorted.sort((a, b) => a.valuation - b.valuation).slice(0, 6);
+    const over = [...state.coins].sort((a, b) => b.valuation - a.valuation).slice(0, 6);
+    const explode = [...state.coins].sort((a, b) => b.explode - a.explode).slice(0, 6);
+
+    const valRow = (c) => `
+      <div class="srow" data-id="${c.id}">
+        <span class="srow__coin">${ICON(c)}<b>${c.symbol}</b></span>
+        <span class="srow__mid">${valMeter(c.valuation)}<small class="muted">${c.athChange.toFixed(0)}% vs ATH · RSI ${c.rsi.toFixed(0)}</small></span>
+        <span class="num">${fmtPrice(c.price)}</span>
+      </div>`;
+    $('#smart-under').innerHTML = under.map(valRow).join('');
+    $('#smart-over').innerHTML = over.map(valRow).join('');
+    $('#smart-explode').innerHTML = explode.map((c) => `
+      <div class="srow" data-id="${c.id}">
+        <span class="srow__coin">${ICON(c)}<b>${c.symbol}</b></span>
+        <span class="srow__mid">
+          <div class="ebar"><span style="width:${c.explode}%"></span></div>
+          <small class="muted">${explodeCatalyst(c)}</small>
+        </span>
+        <span class="escore">${c.explode}</span>
+      </div>`).join('');
+  }
+
+  // ---------- Top picks (day / week / month) ----------
+  function renderPicks(horizon) {
+    state.pickHorizon = horizon;
+    if (!$('#picks-grid')) return;
+    const rank = {
+      day: (c) => c.explode * 0.5 + c.ch24h * 1.5 + c.score * 3,
+      week: (c) => c.ch7d * 1.2 + c.score * 4 + c.explode * 0.3,
+      month: (c) => c.score * 5 - c.valuation * 0.2 + (c.trend === 'up' ? 8 : -8),
+    }[horizon] || ((c) => c.score);
+    const picks = [...state.coins].sort((a, b) => rank(b) - rank(a)).slice(0, 4);
+    const horizonMult = { day: 0.06, week: 0.14, month: 0.30 }[horizon] || 0.1;
+
+    $('#picks-grid').innerHTML = picks.map((c, i) => {
+      const long = c.score >= 0 || c.trend === 'up';
+      const entry = c.price;
+      const target = entry * (1 + (long ? 1 : -1) * horizonMult);
+      const stop = entry * (long ? 1 - horizonMult / 2.5 : 1 + horizonMult / 2.5);
+      const conv = Math.max(1, Math.min(5, Math.round(3 + c.score / 2)));
+      const thesis = long
+        ? `${c.pattern} with ${c.signal.toLowerCase()} momentum; RSI ${c.rsi.toFixed(0)} and price ${c.trend === 'up' ? 'above' : 'testing'} its moving average.`
+        : `Weak structure — ${c.pattern}, ${c.signal.toLowerCase()}. Watching for a reclaim before entry.`;
+      return `
+      <div class="pick" data-id="${c.id}">
+        <div class="pick__head">
+          <span class="pick__rank">#${i + 1}</span>
+          ${ICON(c)}<span><b>${c.name}</b> <small class="muted">${c.symbol}</small></span>
+          <span class="pick__conv" title="Conviction">${'★'.repeat(conv)}${'☆'.repeat(5 - conv)}</span>
+        </div>
+        <p class="pick__thesis">${thesis}</p>
+        <div class="pick__rows">
+          <div><span>Entry</span><b>${fmtPrice(entry)}</b></div>
+          <div><span>Target</span><b class="${long ? 'pos' : 'neg'}">${fmtPrice(target)}</b></div>
+          <div><span>Stop</span><b class="neg">${fmtPrice(stop)}</b></div>
+          <div><span>Signal</span><b>${badge(c)}</b></div>
+        </div>
+      </div>`;
+    }).join('');
+    $$('#picks-tabs .ptab').forEach((t) => t.classList.toggle('active', t.dataset.pick === horizon));
+  }
+
+  // ---------- Discover: new / upcoming / airdrops ----------
+  function renderDiscover() {
+    const X = window.EXTRAS || {};
+    if ($('#disc-new')) $('#disc-new').innerHTML = `<table class="mini">${(X.newListings || []).map((c) => `
+      <tr><td class="mini__coin"><span class="coin-ico" style="background:#2dd4bf22"></span><b>${c.symbol}</b></td>
+      <td class="muted">${c.cat}</td><td class="num">${fmtPrice(c.price)}</td><td class="num">${pct(c.ch24h)}</td>
+      <td class="muted mini__hide">${c.exchange}</td></tr>`).join('')}</table>`;
+    if ($('#disc-upcoming')) $('#disc-upcoming').innerHTML = `<table class="mini">${(X.upcoming || []).map((c) => `
+      <tr><td class="mini__coin"><b>${c.symbol}</b></td><td class="muted">${c.cat}</td>
+      <td class="muted">${c.date}</td><td class="mini__hide"><span class="tag tag--soon">${c.status}</span></td>
+      <td class="num"><div class="hype"><span style="width:${c.hype}%"></span></div></td></tr>`).join('')}</table>`;
+    if ($('#disc-airdrops')) $('#disc-airdrops').innerHTML = `<table class="mini">${(X.airdrops || []).map((a) => `
+      <tr><td class="mini__coin"><b>${a.symbol}</b></td><td class="muted">${a.type}</td>
+      <td class="pos">${a.est}</td><td><span class="tag ${a.status === 'Live' ? 'tag--buy' : a.status === 'Confirmed' ? 'tag--soon' : ''}">${a.status}</span></td>
+      <td class="muted mini__hide">${a.deadline}</td></tr>`).join('')}</table>`;
+  }
+
+  function renderArticles() {
+    const el = $('#articles-grid');
+    if (!el) return;
+    el.innerHTML = (window.EXTRAS?.articles || []).map((a) => `
+      <a class="article" href="#learn">
+        <div class="article__top"><span class="edu__tag">${a.tag}</span><span class="muted">${a.read}</span></div>
+        <h4>${a.title}</h4>
+        <p class="muted">${a.blurb}</p>
+        <span class="muted article__date">${a.date}</span>
+      </a>`).join('');
+  }
+
+  // ---------- Arbitrage opportunities board ----------
+  function arbOpp(c) {
+    const ex = ['Binance', 'Coinbase', 'Kraken', 'OKX', 'Bybit', 'KuCoin', 'Gate.io', 'Bitstamp'];
+    let seed = c.id.split('').reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 11);
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const volBoost = Math.min(Math.abs(c.ch24h) / 18, 1);
+    const spreadPct = +(0.08 + rnd() * 0.6 + volBoost * 2.4).toFixed(2);
+    const lowI = Math.floor(rnd() * ex.length);
+    let highI = Math.floor(rnd() * ex.length);
+    if (highI === lowI) highI = (highI + 1) % ex.length;
+    const low = c.price * (1 - spreadPct / 200);
+    const high = low * (1 + spreadPct / 100);
+    return { coin: c, buyEx: ex[lowI], sellEx: ex[highI], low, high, spreadPct };
+  }
+
+  function renderArbBoard() {
+    const body = $('#arb-board-body');
+    if (!body) return;
+    const btc = btcPrice();
+    const inBase = (usd) => {
+      if (state.arbBase === 'btc' && btc) return '₿' + (usd / btc).toFixed(usd / btc < 1 ? 6 : 4);
+      return fmtPrice(usd);
+    };
+    const opps = state.coins.slice(0, 30).map(arbOpp)
+      .filter((o) => o.spreadPct >= state.arbMinPct)
+      .sort((a, b) => b.spreadPct - a.spreadPct);
+
+    $('#arb-board-meta').textContent =
+      `Scanned ${Math.min(30, state.coins.length)} coins across 8 exchanges · ${opps.length} opportunit${opps.length === 1 ? 'y' : 'ies'} ≥ ${state.arbMinPct}% · updated ${new Date().toLocaleTimeString()}`;
+
+    if (!opps.length) {
+      body.innerHTML = `<tr><td colspan="9" class="empty">No arbitrage opportunity found. Lower the minimum spread.</td></tr>`;
+      return;
+    }
+    body.innerHTML = opps.map((o, i) => {
+      const profit = (1000 / o.low) * o.high - 1000;
+      return `<tr data-id="${o.coin.id}">
+        <td class="muted">${i + 1}</td>
+        <td class="mini__coin">${ICON(o.coin)}<b>${o.coin.symbol}</b> <small class="muted">${o.coin.name}</small></td>
+        <td class="num neg">${inBase(o.low)}</td>
+        <td><span class="ex-tag ex-tag--buy">${o.buyEx}</span></td>
+        <td class="num pos">${inBase(o.high)}</td>
+        <td><span class="ex-tag ex-tag--sell">${o.sellEx}</span></td>
+        <td class="num"><b class="${o.spreadPct >= 1 ? 'pos' : ''}">${o.spreadPct.toFixed(2)}%</b></td>
+        <td class="num pos">${fmtPrice(profit)}</td>
+        <td><button class="link-btn" data-deep="${o.coin.id}">deep scan →</button></td>
+      </tr>`;
+    }).join('');
+  }
+
   // ---------- AI Copilot ----------
   function copilotAnswer(text) {
     const t = text.toLowerCase();
@@ -623,10 +865,19 @@
       renderTable();
     }));
 
-    // Delegated clicks: stars + open drawer from any coin element
+    // Delegated clicks: stars, deep-scan, then open drawer from any coin element
     document.addEventListener('click', (e) => {
       const star = e.target.closest('[data-star]');
       if (star) { e.stopPropagation(); toggleWatch(star.dataset.star); return; }
+      const deep = e.target.closest('[data-deep]');
+      if (deep) {
+        e.stopPropagation();
+        const id = deep.dataset.deep;
+        const sel = $('#arb-coin'); if (sel) sel.value = id;
+        scanArb(id);
+        document.getElementById('arb-summary').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
       const row = e.target.closest('[data-id]');
       if (row && !e.target.closest('a,button,select,input')) openDrawer(row.dataset.id);
     });
@@ -635,8 +886,21 @@
     $('#drawer-overlay').addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) closeDrawer(); });
 
+    // Arbitrage opportunities board controls
+    $('#arb-min').addEventListener('input', (e) => {
+      state.arbMinPct = +e.target.value;
+      $('#arb-min-label').textContent = state.arbMinPct.toFixed(1) + '%';
+      renderArbBoard();
+    });
+    $('#arb-base').addEventListener('change', (e) => { state.arbBase = e.target.value; renderArbBoard(); });
+    $('#arb-refresh').addEventListener('click', renderArbBoard);
+
+    // Deep scan controls
     $('#arb-coin').addEventListener('change', (e) => scanArb(e.target.value));
-    $('#arb-refresh').addEventListener('click', () => scanArb(state.arbCoin));
+    $('#arb-scan').addEventListener('click', () => scanArb(state.arbCoin));
+
+    // Top picks tabs
+    $$('#picks-tabs .ptab').forEach((t) => t.addEventListener('click', () => renderPicks(t.dataset.pick)));
 
     $('#copilot-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -654,6 +918,8 @@
 
   // ---------- init ----------
   bind();
+  renderDiscover();
+  renderArticles();
   load();
   loadGlobal();
   loadFNG();

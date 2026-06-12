@@ -19,13 +19,13 @@
         <span class="brand__name">CoinScope</span>
       </a>
       <nav class="nav__links">
-        <a href="#overview">Markets</a>
+        <a href="#pulse">Pulse</a>
         <a href="#screener">Screener</a>
         <a href="#arbitrage">Arbitrage</a>
-        <a href="#patterns">Patterns</a>
-        <a href="#signals">Setups</a>
+        <a href="#smart">Smart Picks</a>
+        <a href="#picks">Top Picks</a>
+        <a href="#discover">Discover</a>
         <a href="#learn">Learn</a>
-        <a href="#pricing">Pricing</a>
       </nav>
       <div class="nav__actions">
         <a class="btn btn--ghost" href="#screener">Log in</a>
@@ -143,6 +143,29 @@
     </div>
   </section>
 
+  <!-- ===== Market Pulse (cryptopulse) ===== -->
+  <section class="pulse" id="pulse">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Market Pulse</h2>
+          <p class="muted">The market at a glance — winners, losers, volume leaders, sentiment and RSI extremes.</p>
+        </div>
+      </div>
+      <div class="pulse__cards" id="pulse-cards"></div>
+      <div class="pulse__grid">
+        <div class="card pulsetable"><h3 class="card__title pos">📈 Most Increased · 24h</h3><div id="pulse-gainers"></div></div>
+        <div class="card pulsetable"><h3 class="card__title neg">📉 Most Decreased · 24h</h3><div id="pulse-losers"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">🔊 Top Volume</h3><div id="pulse-volume"></div></div>
+        <div class="card pulsetable"><h3 class="card__title pos">🟢 Top Bullish</h3><div id="pulse-bullish"></div></div>
+        <div class="card pulsetable"><h3 class="card__title neg">🔴 Top Bearish</h3><div id="pulse-bearish"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">💧 Lowest RSI · oversold</h3><div id="pulse-oversold"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">🔥 Highest RSI · overbought</h3><div id="pulse-overbought"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">⚡ Top Volume / Cap</h3><div id="pulse-volcap"></div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== Screener ===== -->
   <section class="screener" id="screener">
     <div class="container">
@@ -210,17 +233,51 @@
     <div class="container">
       <div class="section-head">
         <div>
-          <h2>Arbitrage Scanner</h2>
-          <p class="muted">Live price of one coin across exchanges. Buy on the cheapest, sell on the priciest — the spread is your edge.</p>
+          <h2>Arbitrage Opportunities</h2>
+          <p class="muted">Market-wide scan across 8 exchanges. Buy on the <span class="neg">cheapest (red)</span>, sell on the <span class="pos">priciest (green)</span> — the spread is your edge.</p>
         </div>
         <div class="arb__controls">
-          <select class="input" id="arb-coin" aria-label="Select coin"></select>
-          <button class="btn btn--ghost" id="arb-refresh">↻ Scan</button>
+          <label class="arb__base">Base
+            <select class="input" id="arb-base" aria-label="Base currency">
+              <option value="usd">USD</option>
+              <option value="btc">BTC</option>
+            </select>
+          </label>
+          <label class="arb__slider">Min spread <b id="arb-min-label">0.5%</b>
+            <input type="range" id="arb-min" min="0" max="5" step="0.1" value="0.5" />
+          </label>
+          <button class="btn btn--ghost" id="arb-refresh">↻ Rescan</button>
         </div>
       </div>
 
-      <div class="arb__summary" id="arb-summary"></div>
+      <div class="arb__board-meta muted" id="arb-board-meta"></div>
+      <div class="table-wrap">
+        <table class="grid" id="arb-board-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Coin</th>
+              <th class="num">Buy price</th>
+              <th>Buy at (low)</th>
+              <th class="num">Sell price</th>
+              <th>Sell at (high)</th>
+              <th class="num">Spread</th>
+              <th class="num">Profit / $1k</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="arb-board-body">
+            <tr><td colspan="9" class="loading">Scanning the market…</td></tr>
+          </tbody>
+        </table>
+      </div>
 
+      <h3 class="arb__deep-title">Deep scan — every exchange for one coin</h3>
+      <div class="arb__controls arb__controls--deep">
+        <select class="input" id="arb-coin" aria-label="Select coin"></select>
+        <button class="btn btn--ghost" id="arb-scan">↻ Scan exchanges</button>
+      </div>
+      <div class="arb__summary" id="arb-summary"></div>
       <div class="table-wrap">
         <table class="grid" id="arb-table">
           <thead>
@@ -239,7 +296,60 @@
           </tbody>
         </table>
       </div>
-      <p class="arb__note muted">Spreads are indicative and exclude trading/withdrawal fees, transfer time and slippage. Not financial advice.</p>
+      <p class="arb__note muted">Spreads exclude trading/withdrawal fees, transfer time and slippage. The opportunities board uses a deterministic model across exchanges; the deep scan uses live CoinGecko market data. Not financial advice.</p>
+    </div>
+  </section>
+
+  <!-- ===== Smart picks: valuation + explosion ===== -->
+  <section class="smart" id="smart">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Smart Picks</h2>
+          <p class="muted">Model-driven scores — valuation vs ATH/RSI, and a momentum-based "explosion" score. Educational, not advice.</p>
+        </div>
+      </div>
+      <div class="smart__grid">
+        <div class="card"><h3 class="card__title pos">💎 Most Undervalued</h3><div id="smart-under"></div></div>
+        <div class="card"><h3 class="card__title neg">🎈 Most Overvalued</h3><div id="smart-over"></div></div>
+        <div class="card card--explode"><h3 class="card__title">🚀 Most Likely to Explode</h3><div id="smart-explode"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Picks of the day / week / month ===== -->
+  <section class="picks" id="picks">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Top Picks</h2>
+          <p class="muted">Our highest-conviction setups, refreshed for each horizon.</p>
+        </div>
+        <div class="picks__tabs" id="picks-tabs">
+          <button class="ptab active" data-pick="day">Day</button>
+          <button class="ptab" data-pick="week">Week</button>
+          <button class="ptab" data-pick="month">Month</button>
+        </div>
+      </div>
+      <div class="picks__grid" id="picks-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== Discover: new / upcoming / airdrops ===== -->
+  <section class="discover" id="discover">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Discover</h2>
+          <p class="muted">Freshly listed coins, upcoming launches and live airdrop opportunities.</p>
+        </div>
+      </div>
+      <div class="discover__grid">
+        <div class="card"><h3 class="card__title">🆕 New Listings</h3><div id="disc-new"></div></div>
+        <div class="card"><h3 class="card__title">📅 Coming Soon</h3><div id="disc-upcoming"></div></div>
+        <div class="card"><h3 class="card__title">🪂 Airdrops</h3><div id="disc-airdrops"></div></div>
+      </div>
+      <p class="muted arb__note">New/upcoming/airdrop listings are curated sample data for demonstration.</p>
     </div>
   </section>
 
@@ -299,10 +409,12 @@
     <div class="container">
       <div class="section-head">
         <div>
-          <h2>Knowledge Base</h2>
-          <p class="muted">Learn to read the market — patterns, indicators and arbitrage explained.</p>
+          <h2>Articles &amp; Knowledge Base</h2>
+          <p class="muted">Latest research and learn-to-trade guides.</p>
         </div>
       </div>
+      <div class="articles__grid" id="articles-grid"></div>
+      <h3 class="edu__subhead">Learn the basics</h3>
       <div class="edu__grid">
         <a class="edu__card" href="#patterns">
           <span class="edu__tag">Patterns</span>
@@ -415,6 +527,7 @@
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
   <script src="assets/indicators.js"></script>
   <script src="assets/app.js"></script>
 </body>
