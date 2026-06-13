@@ -14,7 +14,7 @@ const KEY = 'feed';
 const MAX = 200;
 const cors = {
   'access-control-allow-origin': '*',
-  'access-control-allow-methods': 'GET, POST, OPTIONS',
+  'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, x-webhook-secret',
 };
 const json = (statusCode, body, extra = {}) => ({
@@ -43,13 +43,22 @@ export const handler = async (event) => {
     return json(200, { count: feed.length, events: feed }, { 'cache-control': 'no-store' });
   }
 
+  const secret = process.env.CG_WEBHOOK_SECRET;
+  const authed = () => {
+    if (!secret) return true;
+    const provided = (event.headers && (event.headers['x-webhook-secret'] || event.headers['X-Webhook-Secret']))
+      || (event.queryStringParameters && event.queryStringParameters.token);
+    return provided === secret;
+  };
+
+  if (event.httpMethod === 'DELETE') {
+    if (!authed()) return json(401, { error: 'unauthorized' });
+    await s.setJSON(KEY, []);
+    return json(200, { ok: true, cleared: true });
+  }
+
   if (event.httpMethod === 'POST') {
-    const secret = process.env.CG_WEBHOOK_SECRET;
-    if (secret) {
-      const provided = (event.headers && (event.headers['x-webhook-secret'] || event.headers['X-Webhook-Secret']))
-        || (event.queryStringParameters && event.queryStringParameters.token);
-      if (provided !== secret) return json(401, { error: 'unauthorized' });
-    }
+    if (!authed()) return json(401, { error: 'unauthorized' });
 
     let body;
     try { body = JSON.parse(event.body || '{}'); } catch { return json(400, { error: 'invalid json' }); }
