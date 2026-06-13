@@ -3,7 +3,7 @@
   'use strict';
 
   const CG = 'https://api.coingecko.com/api/v3';
-  const PROXY = '/api/cg?endpoint=';
+  const PROXY = '/.netlify/functions/cg?endpoint=';
   const TOP_N = 1000;            // target number of coins
   const PER_PAGE = 250;          // CoinGecko max page size
   const PAGES = Math.ceil(TOP_N / PER_PAGE);
