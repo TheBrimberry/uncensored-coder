@@ -8,6 +8,7 @@
     ['arbitrage.html', 'Arbitrage'],
     ['predictions.html', 'Predictions'],
     ['converter.html', 'Converter'],
+    ['compare.html', 'Compare'],
     ['smart.html', 'Smart Picks'],
     ['picks.html', 'Top Picks'],
     ['discover.html', 'Discover'],

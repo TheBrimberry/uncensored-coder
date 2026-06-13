@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compare Coins — CoinScope</title>
+  <meta name="description" content="Compare up to 4 cryptocurrencies side by side — price, market cap, performance, RSI, valuation and predictions, with a normalized overlay chart." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="compare">
+  <div id="app-chrome"></div>
+  <section class="compare" id="compare">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Compare Coins</h2><p class="muted">Up to 4 coins side by side — performance, fundamentals and forecasts, with a normalized price overlay.</p></div>
+        <div class="picks__tabs" id="cmp-tf">
+          <button class="tf" data-days="30">30D</button>
+          <button class="tf active" data-days="90">90D</button>
+          <button class="tf" data-days="365">1Y</button>
+        </div>
+      </div>
+
+      <div class="cmp-controls">
+        <select class="input" id="cmp-add" aria-label="Add coin"></select>
+        <button class="btn btn--primary" id="cmp-addbtn">+ Add coin</button>
+      </div>
+      <div class="cmp-chips" id="cmp-chips"></div>
+
+      <div id="cmp-chart" class="cp-chart"><div class="loading">Loading chart…</div></div>
+
+      <div class="table-wrap">
+        <table class="grid" id="cmp-table"><tbody><tr><td class="loading">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

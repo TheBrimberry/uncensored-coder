@@ -3,13 +3,32 @@
   'use strict';
 
   const CG = 'https://api.coingecko.com/api/v3';
+  const PROXY = '/api/cg?endpoint=';
   const TOP_N = 1000;            // target number of coins
   const PER_PAGE = 250;          // CoinGecko max page size
   const PAGES = Math.ceil(TOP_N / PER_PAGE);
-  const marketsURL = (page) => CG + '/coins/markets'
+  const marketsEndpoint = (page) => 'coins/markets'
     + `?vs_currency=usd&order=market_cap_desc&per_page=${PER_PAGE}&page=${page}`
     + '&sparkline=true&price_change_percentage=1h%2C24h%2C7d';
   const TABLE_CAP = 150;         // max rows rendered in the big screener table
+
+  // CoinGecko fetch: prefer the Netlify proxy (keyed, cached), fall back to the
+  // public API directly (e.g. when running from a static file server). The first
+  // success pins the mode so we don't double-request afterwards.
+  let CG_MODE = null; // 'proxy' | 'direct'
+  async function cg(endpoint) {
+    const proxyURL = PROXY + encodeURIComponent(endpoint);
+    const directURL = CG + '/' + endpoint;
+    const order = CG_MODE === 'direct' ? [directURL]
+      : CG_MODE === 'proxy' ? [proxyURL]
+        : [proxyURL, directURL];
+    let lastErr;
+    for (const u of order) {
+      try { const d = await getJSON(u); CG_MODE = u === proxyURL ? 'proxy' : 'direct'; return d; }
+      catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
 
   const LS = {
     watch: 'cs_watch',
@@ -31,6 +50,8 @@
     predHorizon: '1m',
     portfolio: loadLS(LS.portfolio, []),
     convReady: false,
+    compare: [],
+    cmpDays: 90,
     global: null,
   };
 
@@ -80,7 +101,7 @@
     try {
       // Fetch the top N coins across paginated requests (sequential to be gentle on the free API).
       for (let p = 1; p <= PAGES; p++) {
-        const page = await getJSON(marketsURL(p));
+        const page = await cg(marketsEndpoint(p));
         if (!Array.isArray(page) || !page.length) break;
         raw = raw.concat(page);
         setStatus(`Loading… ${raw.length} coins`, '');
@@ -169,6 +190,7 @@
     setupConverter();
     renderPortfolio();
     renderCoinPage();
+    renderCompare();
   }
 
   // ---------- screener ----------
@@ -313,7 +335,7 @@
   // ---------- global stats bar ----------
   async function loadGlobal() {
     let g;
-    try { g = (await getJSON(CG + '/global')).data; }
+    try { g = (await cg('global')).data; }
     catch { g = FALLBACK_GLOBAL.data; }
     state.global = g;
     renderPulseCards();
@@ -356,7 +378,7 @@
   async function loadTrending() {
     if (!$('#trending-list')) return;
     let coins;
-    try { coins = (await getJSON(CG + '/search/trending')).coins; }
+    try { coins = (await cg('search/trending')).coins; }
     catch { coins = FALLBACK_TRENDING.coins; }
     $('#trending-list').innerHTML = coins.slice(0, 7).map((w, i) => {
       const it = w.item;
@@ -408,7 +430,7 @@
 
     let prices = c.prices;
     try {
-      const d = await getJSON(`${CG}/coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`);
+      const d = await cg(`coins/${id}/market_chart?vs_currency=usd&days=30&interval=daily`);
       if (d.prices && d.prices.length) prices = d.prices.map((p) => p[1]);
     } catch { /* keep 7d sparkline */ }
 
@@ -428,7 +450,7 @@
         <span class="dr__rank">Rank #${c.rank}</span>
       </div>
 
-      ${areaSVG(prices, c.ch7d >= 0)}
+      <div id="dr-chart" class="dr__chart-host">${areaSVG(prices, c.ch7d >= 0)}</div>
 
       <div class="dr__stats">
         <div><span>Signal</span><b>${badge(c)}</b></div>
@@ -459,6 +481,8 @@
         <p class="muted dr__alert-note">Alerts are stored in your browser and checked on each refresh.</p>
       </div>
     `;
+
+    loadDrawerChart(id, prices);
 
     $('#dr-alert-set')?.addEventListener('click', () => {
       const price = parseFloat($('#dr-alert-price').value);
@@ -495,7 +519,44 @@
       <polygon fill="url(#grad)" points="${area}"/>
       <polyline fill="none" stroke="${col}" stroke-width="2" points="${line}"/>
     </svg>
-    <div class="dr__chart-label muted">Last ${n} data points · 30-day price</div>`;
+    <div class="dr__chart-label muted">Last ${n} data points</div>`;
+  }
+
+  // Candlestick chart from OHLC rows [t, open, high, low, close].
+  function candleSVG(ohlc) {
+    if (!ohlc || ohlc.length < 2) return '';
+    const W = 680, H = 240, padX = 4, padY = 10, n = ohlc.length;
+    const max = Math.max(...ohlc.map((d) => d[2])), min = Math.min(...ohlc.map((d) => d[3])), span = max - min || 1;
+    const cw = (W - 2 * padX) / n, bw = Math.max(1.2, cw * 0.62);
+    const y = (v) => padY + (1 - (v - min) / span) * (H - 2 * padY);
+    const cx = (i) => padX + cw * i + cw / 2;
+    const bars = ohlc.map((d, i) => {
+      const [, o, h, l, c] = d, up = c >= o, col = up ? '#16c784' : '#ea3943';
+      const yo = y(o), yc = y(c), top = Math.min(yo, yc), bh = Math.max(1, Math.abs(yc - yo));
+      return `<line x1="${cx(i).toFixed(1)}" x2="${cx(i).toFixed(1)}" y1="${y(h).toFixed(1)}" y2="${y(l).toFixed(1)}" stroke="${col}" stroke-width="1"/>`
+        + `<rect x="${(cx(i) - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}"/>`;
+    }).join('');
+    return `<svg class="candles" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none">${bars}</svg>`;
+  }
+
+  async function loadOHLC(id, days) {
+    try { const d = await cg(`coins/${id}/ohlc?vs_currency=usd&days=${days}`); if (Array.isArray(d) && d.length) return d; } catch { /* none */ }
+    return null;
+  }
+
+  async function loadCoinChart(id, days) {
+    const el = $('#cp-chart'); if (!el) return;
+    el.innerHTML = '<div class="loading">Loading chart…</div>';
+    const ohlc = await loadOHLC(id, days);
+    if (ohlc) el.innerHTML = candleSVG(ohlc) + `<div class="dr__chart-label muted">${ohlc.length} candles · ${days}-day OHLC</div>`;
+    else { const c = state.coins.find((x) => x.id === id); el.innerHTML = areaSVG(c ? c.prices : [], true); }
+    $$('#cp-tf .tf').forEach((t) => t.classList.toggle('active', +t.dataset.days === days));
+  }
+
+  async function loadDrawerChart(id, fallbackPrices) {
+    const el = $('#dr-chart'); if (!el) return;
+    const ohlc = await loadOHLC(id, 30);
+    el.innerHTML = ohlc ? candleSVG(ohlc) + `<div class="dr__chart-label muted">30-day OHLC</div>` : areaSVG(fallbackPrices, true);
   }
 
   function closeDrawer() {
@@ -566,7 +627,7 @@
 
     let tickers;
     try {
-      const d = await getJSON(`${CG}/coins/${id}/tickers?include_exchange_logo=false&depth=false`);
+      const d = await cg(`coins/${id}/tickers?include_exchange_logo=false&depth=false`);
       tickers = (d.tickers || [])
         .filter((t) => t.converted_last && t.converted_last.usd && ['USD', 'USDT', 'USDC', 'BUSD'].includes(t.target))
         .map((t) => ({
@@ -933,7 +994,7 @@
 
     let prices = c.prices;
     try {
-      const d = await getJSON(`${CG}/coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`);
+      const d = await cg(`coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`);
       if (d.prices && d.prices.length) prices = d.prices.map((p) => p[1]);
     } catch { /* keep sparkline */ }
     const rsi = TA.rsi(prices) ?? c.rsi, sma20 = TA.sma(prices, Math.min(20, prices.length)), sma50 = TA.sma(prices, Math.min(50, prices.length));
@@ -946,7 +1007,13 @@
           <div class="dr__price" style="font-size:1.3rem">${fmtPrice(c.price)} <span>${pct(c.ch24h)} (24h)</span></div></div>
         <span class="dr__rank">Rank #${c.rank}</span>
       </div>
-      ${areaSVG(prices, c.ch7d >= 0)}
+      <div class="tf-tabs" id="cp-tf">
+        <button class="tf" data-days="7">7D</button>
+        <button class="tf" data-days="30">30D</button>
+        <button class="tf active" data-days="90">90D</button>
+        <button class="tf" data-days="365">1Y</button>
+      </div>
+      <div id="cp-chart" class="cp-chart"><div class="loading">Loading chart…</div></div>
       <h3 class="arb__deep-title">Price prediction</h3>
       <div class="pred-cards">${PRED_HORIZONS.map(([, lbl, d]) => {
         const f = forecast(c, d), ch = (f / c.price - 1) * 100;
@@ -978,6 +1045,80 @@
         <div><span>Explosion score</span><b class="escore">${c.explode}</b></div>
         <div><span>Circ. supply</span><b>${c.supply ? c.supply.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</b></div>
       </div>`;
+
+    $$('#cp-tf .tf').forEach((t) => t.addEventListener('click', () => loadCoinChart(id, +t.dataset.days)));
+    loadCoinChart(id, 90);
+  }
+
+  // ---------- Compare page ----------
+  const CMP_PAL = ['#16c784', '#3b82f6', '#f0b90b', '#e84142'];
+  function multiLineSVG(series) {
+    const valid = series.filter((s) => s.prices && s.prices.length > 1);
+    if (!valid.length) return '<div class="muted" style="padding:1rem">No chart data.</div>';
+    const norm = valid.map((s) => ({ ...s, pct: s.prices.map((p) => (p / s.prices[0] - 1) * 100) }));
+    const all = norm.flatMap((s) => s.pct);
+    const min = Math.min(...all), max = Math.max(...all), span = max - min || 1;
+    const W = 680, H = 240, pad = 10;
+    const y = (v) => pad + (1 - (v - min) / span) * (H - 2 * pad);
+    const lines = norm.map((s) => {
+      const n = s.pct.length;
+      const pts = s.pct.map((v, i) => `${(pad + (i / (n - 1)) * (W - 2 * pad)).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+      return `<polyline fill="none" stroke="${s.color}" stroke-width="2" points="${pts}"/>`;
+    }).join('');
+    const zero = y(0);
+    return `<svg class="candles" viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none">
+      <line x1="0" x2="${W}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}" stroke="#1e2a38" stroke-dasharray="4 4"/>${lines}</svg>`;
+  }
+  async function loadCompareChart() {
+    const el = $('#cmp-chart'); if (!el) return;
+    if (!state.compare.length) { el.innerHTML = '<div class="muted" style="padding:1rem">Add coins to compare.</div>'; return; }
+    el.innerHTML = '<div class="loading">Loading chart…</div>';
+    const series = [];
+    for (let i = 0; i < state.compare.length; i++) {
+      const id = state.compare[i], c = state.coins.find((x) => x.id === id);
+      let prices = c ? c.prices : [];
+      try { const d = await cg(`coins/${id}/market_chart?vs_currency=usd&days=${state.cmpDays}&interval=daily`); if (d.prices && d.prices.length) prices = d.prices.map((p) => p[1]); } catch { /* keep */ }
+      series.push({ name: c ? c.symbol : id, color: CMP_PAL[i % CMP_PAL.length], prices });
+    }
+    el.innerHTML = multiLineSVG(series)
+      + `<div class="cmp-legend">${series.map((s) => `<span><i style="background:${s.color}"></i>${s.name}</span>`).join('')}</div>`
+      + `<div class="dr__chart-label muted">Normalized % change · ${state.cmpDays}-day</div>`;
+    $$('#cmp-tf .tf').forEach((t) => t.classList.toggle('active', +t.dataset.days === state.cmpDays));
+  }
+  function renderCompare() {
+    const host = $('#cmp-table'); if (!host) return;
+    const add = $('#cmp-add');
+    if (add && !add.dataset.filled && state.coins.length) {
+      add.innerHTML = state.coins.slice(0, 300).map((c) => `<option value="${c.id}">${c.symbol} — ${c.name}</option>`).join('');
+      add.dataset.filled = '1';
+    }
+    if (!state.compare.length && state.coins.length) {
+      state.compare = ['bitcoin', 'ethereum', 'solana'].filter((id) => state.coins.some((c) => c.id === id));
+    }
+    const cs = state.compare.map((id) => state.coins.find((c) => c.id === id)).filter(Boolean);
+    const chips = $('#cmp-chips');
+    if (chips) chips.innerHTML = cs.map((c) => `<span class="cmp-chip">${ICON(c)}<b>${c.symbol}</b><button class="cmp-x" data-cmpremove="${c.id}" aria-label="Remove">✕</button></span>`).join('') || '<span class="muted">No coins selected.</span>';
+
+    if (!cs.length) { host.innerHTML = '<tbody><tr><td class="empty">Add coins to compare.</td></tr></tbody>'; loadCompareChart(); return; }
+    const rows = [
+      ['Price', (c) => fmtPrice(c.price)],
+      ['24h', (c) => pct(c.ch24h)],
+      ['7d', (c) => pct(c.ch7d)],
+      ['Market cap', (c) => fmtBig(c.mcap)],
+      ['24h volume', (c) => fmtBig(c.vol)],
+      ['RSI(14)', (c) => c.rsi.toFixed(0)],
+      ['Signal', (c) => badge(c)],
+      ['Pattern', (c) => `<span class="pattern-tag">${c.pattern}</span>`],
+      ['Valuation', (c) => c.valuation < -15 ? '<span class="pos">Undervalued</span>' : c.valuation > 25 ? '<span class="neg">Overvalued</span>' : 'Fair'],
+      ['Explosion', (c) => `<span class="escore">${c.explode}</span>`],
+      ['From ATH', (c) => c.athChange != null ? pct(c.athChange) : '—'],
+      ['1M forecast', (c) => { const f = forecast(c, 30); return `${fmtPrice(f)} <small class="${f >= c.price ? 'pos' : 'neg'}">${((f / c.price - 1) * 100).toFixed(1)}%</small>`; }],
+      ['1Y forecast', (c) => { const f = forecast(c, 365); return `${fmtPrice(f)} <small class="${f >= c.price ? 'pos' : 'neg'}">${((f / c.price - 1) * 100).toFixed(1)}%</small>`; }],
+    ];
+    const thead = `<thead><tr><th>Metric</th>${cs.map((c) => `<th>${ICON(c)} ${c.symbol}</th>`).join('')}</tr></thead>`;
+    const tbody = `<tbody>${rows.map(([label, fn]) => `<tr><td class="muted">${label}</td>${cs.map((c) => `<td>${fn(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    host.innerHTML = thead + tbody;
+    loadCompareChart();
   }
 
   // ---------- AI Copilot ----------
@@ -1112,6 +1253,18 @@
 
     // Top picks tabs
     $$('#picks-tabs .ptab').forEach((t) => t.addEventListener('click', () => renderPicks(t.dataset.pick)));
+
+    // Compare
+    on('#cmp-addbtn', 'click', () => {
+      const v = ($('#cmp-add') || {}).value;
+      if (v && !state.compare.includes(v) && state.compare.length < 4) { state.compare.push(v); renderCompare(); }
+      else if (state.compare.length >= 4) toast('You can compare up to 4 coins.', 'warn');
+    });
+    on('#cmp-chips', 'click', (e) => {
+      const x = e.target.closest('[data-cmpremove]');
+      if (x) { state.compare = state.compare.filter((id) => id !== x.dataset.cmpremove); renderCompare(); }
+    });
+    $$('#cmp-tf .tf').forEach((t) => t.addEventListener('click', () => { state.cmpDays = +t.dataset.days; loadCompareChart(); }));
 
     // Predictions horizon tabs
     $$('#pred-tabs .ptab').forEach((t) => t.addEventListener('click', () => renderPredictions(t.dataset.pred)));

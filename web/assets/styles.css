@@ -469,3 +469,27 @@ img.coin-ico { object-fit: cover; }
   .nav__links.open { display: flex; }
   .nav__links a { padding: .6rem 0; }
 }
+
+/* ===== Charts: candlesticks & timeframe tabs ===== */
+.candles { display: block; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; height: 240px; }
+.cp-chart { margin: .2rem 0 1rem; }
+.cp-chart .candles, .cp-chart svg { height: 260px; }
+.dr__chart-host { margin-bottom: .4rem; }
+.tf-tabs { display: flex; gap: .4rem; margin: .4rem 0 .8rem; }
+.tf { background: var(--panel); border: 1px solid var(--border); color: var(--muted); padding: .35rem .8rem; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: .82rem; }
+.tf.active { background: rgba(45,212,191,.12); color: var(--accent); border-color: rgba(45,212,191,.4); }
+
+/* ===== Compare ===== */
+.cmp-controls { display: flex; gap: .7rem; margin-bottom: 1rem; max-width: 520px; }
+.cmp-controls .input { flex: 1; }
+.cmp-chips { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.2rem; }
+.cmp-chip { display: inline-flex; align-items: center; gap: .45rem; background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: .35rem .7rem; font-size: .88rem; }
+.cmp-chip .coin-ico { width: 20px; height: 20px; }
+.cmp-x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: .8rem; padding: 0 .1rem; }
+.cmp-x:hover { color: var(--red); }
+.cmp-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .6rem; font-size: .85rem; }
+.cmp-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+.cmp-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+#cmp-table { min-width: 480px; }
+#cmp-table th { text-transform: none; font-size: .85rem; }
+#cmp-table td { white-space: nowrap; }

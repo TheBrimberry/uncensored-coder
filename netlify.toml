@@ -2,5 +2,16 @@
   publish = "web"
   command = ""
 
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Friendly path for the CoinGecko proxy function.
+[[redirects]]
+  from = "/api/cg"
+  to = "/.netlify/functions/cg"
+  status = 200
+
 # Multi-page static site — Netlify serves each .html directly.
-# Pretty URLs (e.g. /pulse) resolve to the matching .html automatically.
+# To enable a higher rate limit, set COINGECKO_API_KEY (and optionally
+# COINGECKO_API_TIER=pro) in the site's environment variables.
