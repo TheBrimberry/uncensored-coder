@@ -493,3 +493,40 @@ img.coin-ico { object-fit: cover; }
 #cmp-table { min-width: 480px; }
 #cmp-table th { text-transform: none; font-size: .85rem; }
 #cmp-table td { white-space: nowrap; }
+
+/* ===== Coin Updates feed ===== */
+.updates-feed { display: grid; gap: .9rem; }
+.upd { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
+.upd__head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .6rem; gap: 1rem; }
+.upd__changes { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+.upd__row { display: grid; grid-template-columns: auto auto 1fr; gap: .6rem; align-items: baseline; font-size: .9rem; }
+.upd__type { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; padding: .15rem .5rem; border-radius: 999px; white-space: nowrap; }
+.upd__type--pos { color: var(--green); background: rgba(22,199,132,.1); }
+.upd__type--neg { color: var(--red); background: rgba(234,57,67,.1); }
+.upd__type--blue { color: var(--blue); background: rgba(59,130,246,.12); }
+.upd__field { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); font-size: .82rem; }
+.upd__val { word-break: break-word; }
+.upd__val s { text-decoration: line-through; }
+.upd-empty { background: var(--panel); border: 1px dashed var(--border); border-radius: var(--radius); padding: 1.6rem; text-align: center; }
+.upd-empty p { margin: .4rem 0; }
+.upd-url { display: inline-block; margin-top: .4rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: .5rem .8rem; font-family: ui-monospace, monospace; font-size: .82rem; color: var(--accent); word-break: break-all; }
+
+/* ===== High-yield savings ===== */
+.hy-note { background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; padding: .9rem 1.1rem; font-size: .9rem; margin-bottom: 1.4rem; color: var(--muted); }
+.hy-note b, .hy-note strong { color: var(--text); }
+.hy-h3 { font-size: 1.2rem; margin: 1.8rem 0 1rem; }
+.hy-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.hy-card { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
+.hy-card__tag { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); background: rgba(45,212,191,.1); padding: .2rem .55rem; border-radius: 999px; }
+.hy-card__apy { font-size: 1.9rem; font-weight: 800; margin: .6rem 0 .2rem; color: var(--green); }
+.hy-card__apy small { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.hy-card__name { font-weight: 700; }
+.hy-card__type { font-size: .8rem; }
+.hy-card__best { font-size: .85rem; color: var(--muted); margin: .5rem 0 0; }
+.hy-apy { font-weight: 700; }
+.hy-apy--best { color: var(--green); }
+.hy-tips ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .55rem; color: var(--muted); font-size: .92rem; }
+.hy-tips li b { color: var(--text); }
+.hy-disclaimer { font-size: .8rem; margin-top: 1.6rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+@media (max-width: 880px) { .hy-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .hy-cards { grid-template-columns: 1fr; } }

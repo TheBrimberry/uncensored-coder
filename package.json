@@ -1,0 +1,9 @@
+{
+  "name": "coinscope-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Serverless functions for the CoinScope static site",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

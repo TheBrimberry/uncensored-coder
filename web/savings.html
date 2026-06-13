@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>High-Yield Savings — CoinScope</title>
+  <meta name="description" content="Compare the top high-yield savings accounts and cash management options — APY, minimums, fees and what each is best for." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="savings">
+  <div id="app-chrome"></div>
+
+  <section class="savings" id="savings">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>High-Yield Savings &amp; Cash</h2>
+          <p class="muted">The top places to park cash and earn real interest — ranked by overall benefit. Rates are illustrative; always confirm the current APY on the provider's site.</p>
+        </div>
+      </div>
+
+      <div class="hy-note">
+        <strong>How to read this:</strong> APY = annual percentage yield (what you actually earn in a year, compounding included).
+        Most online banks here are <b>FDIC-insured to $250k</b>; brokerage cash accounts use <b>partner-bank sweep</b> programs
+        for insurance. "Best for" highlights where each option shines. Figures shown are representative as of <b>June 2026</b> and move with the Fed.
+      </div>
+
+      <!-- Best-for highlight cards -->
+      <div class="hy-cards" id="hy-cards"></div>
+
+      <h3 class="hy-h3">Full comparison</h3>
+      <div class="toolbar">
+        <input class="input" id="hy-search" placeholder="Filter by name or type…" />
+        <select class="input" id="hy-sort">
+          <option value="apy">Sort: Highest APY</option>
+          <option value="name">Sort: Name (A–Z)</option>
+          <option value="min">Sort: Lowest minimum</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="grid" id="hy-table">
+          <thead>
+            <tr>
+              <th>Provider</th><th>Type</th><th class="num">APY (illustrative)</th>
+              <th class="num">Min. balance</th><th>Monthly fee</th><th>Best for</th>
+            </tr>
+          </thead>
+          <tbody id="hy-body"></tbody>
+        </table>
+      </div>
+
+      <div class="hy-tips">
+        <h3 class="hy-h3">Tips to maximize yield</h3>
+        <ul>
+          <li><b>Chase the rate, not the brand.</b> Online banks change APYs often — check quarterly and move if yours lags by &gt;0.5%.</li>
+          <li><b>Mind the strings.</b> Some top APYs require direct deposit, a linked checking, or a balance tier. Read the fine print.</li>
+          <li><b>Money-market funds can beat savings.</b> Brokerage funds (e.g. government MMFs) often track short-term rates closely, but they're not FDIC-insured.</li>
+          <li><b>Keep an emergency fund liquid.</b> 3–6 months of expenses in a no-penalty, instant-access account before chasing CDs or T-bills.</li>
+          <li><b>Watch taxes.</b> Interest is taxable as ordinary income; T-bills are state-tax-exempt, which can raise their effective yield.</li>
+        </ul>
+      </div>
+
+      <p class="hy-disclaimer muted">
+        Educational information only — not financial advice. APYs are illustrative and change frequently;
+        verify current rates, terms, minimums and insurance directly with each provider before opening an account.
+      </p>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+
+  <script>
+    // Curated set of well-known high-yield options. APYs are illustrative
+    // (representative of a mid-2026 rate environment) — verify before acting.
+    window.HYSA = [
+      { name: 'Wealthfront Cash', type: 'Cash management', apy: 4.50, min: 1, fee: 0, best: 'Highest base APY + sweep insurance to $8M', tier: 'top' },
+      { name: 'SoFi Checking & Savings', type: 'Bank (fintech)', apy: 4.30, min: 0, fee: 0, best: 'Top APY with direct deposit, no fees', tier: 'top' },
+      { name: 'Marcus by Goldman Sachs', type: 'Online savings', apy: 4.10, min: 0, fee: 0, best: 'Simple, trusted, no minimums', tier: 'top' },
+      { name: 'American Express HYSA', type: 'Online savings', apy: 4.00, min: 0, fee: 0, best: 'Established brand, reliable service' },
+      { name: 'Ally Online Savings', type: 'Online savings', apy: 4.00, min: 0, fee: 0, best: 'Best all-round app & buckets feature' },
+      { name: 'Capital One 360 Performance', type: 'Online savings', apy: 4.00, min: 0, fee: 0, best: 'Branch access + strong app' },
+      { name: 'Discover Online Savings', type: 'Online savings', apy: 3.90, min: 0, fee: 0, best: 'No fees of any kind, great support' },
+      { name: 'Synchrony High Yield', type: 'Online savings', apy: 4.15, min: 0, fee: 0, best: 'High APY + optional ATM card' },
+      { name: 'CIT Platinum Savings', type: 'Online savings', apy: 4.35, min: 5000, fee: 0, best: 'Top APY for larger balances ($5k+)' },
+      { name: 'Betterment Cash Reserve', type: 'Cash management', apy: 4.25, min: 0, fee: 0, best: 'Sweep insurance to $2M, auto-invest combo' },
+      { name: 'Fidelity SPAXX (MMF)', type: 'Money-market fund', apy: 4.20, min: 0, fee: 0, best: 'Cash that auto-invests in your brokerage' },
+      { name: 'Vanguard VMFXX (MMF)', type: 'Money-market fund', apy: 4.25, min: 3000, fee: 0, best: 'Low-cost gov MMF, state-tax efficient' },
+      { name: 'US Treasury Bills (4-wk)', type: 'Government bond', apy: 4.30, min: 100, fee: 0, best: 'State-tax-exempt, backed by the Treasury' },
+    ];
+  </script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/savings.js"></script>
+</body>
+</html>

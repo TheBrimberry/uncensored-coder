@@ -191,6 +191,7 @@
     renderPortfolio();
     renderCoinPage();
     renderCompare();
+    renderUpdates();
   }
 
   // ---------- screener ----------
@@ -1119,6 +1120,58 @@
     const tbody = `<tbody>${rows.map(([label, fn]) => `<tr><td class="muted">${label}</td>${cs.map((c) => `<td>${fn(c)}</td>`).join('')}</tr>`).join('')}</tbody>`;
     host.innerHTML = thead + tbody;
     loadCompareChart();
+  }
+
+  // ---------- Coin Updates feed (CoinGecko webhook) ----------
+  const WEBHOOK = '/.netlify/functions/cg-webhook';
+  function relTime(iso) {
+    const t = new Date(iso).getTime(); if (!t) return '';
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+    return `${Math.floor(s / 86400)}d ago`;
+  }
+  function changeRow(ch) {
+    const type = (ch.change_type || 'update').toLowerCase();
+    const cls = type === 'addition' ? 'pos' : type === 'removal' ? 'neg' : 'blue';
+    const arrow = type === 'addition' ? '+' : type === 'removal' ? '−' : '↻';
+    const ov = ch.old_value, nv = ch.new_value;
+    let val;
+    if (type === 'addition') val = `<b>${esc(nv)}</b>`;
+    else if (type === 'removal') val = `<s class="muted">${esc(ov)}</s>`;
+    else val = `<s class="muted">${esc(ov)}</s> → <b>${esc(nv)}</b>`;
+    return `<li class="upd__row"><span class="upd__type upd__type--${cls}">${arrow} ${type}</span>
+      <span class="upd__field">${esc(ch.field)}</span><span class="upd__val">${val}</span></li>`;
+  }
+  function esc(v) {
+    if (v == null) return '—';
+    return String(v).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  }
+  function updateCard(ev) {
+    return `<article class="upd" data-id="${esc(ev.id)}">
+      <header class="upd__head">
+        <div><b>${esc(ev.name)}</b> <span class="muted">${esc((ev.symbol || '').toUpperCase())}</span></div>
+        <time class="muted" title="${esc(ev.received_at)}">${relTime(ev.received_at)}</time>
+      </header>
+      <ul class="upd__changes">${(ev.changes || []).map(changeRow).join('') || '<li class="muted">No field details.</li>'}</ul>
+    </article>`;
+  }
+  async function renderUpdates() {
+    const host = $('#updates-feed'); if (!host) return;
+    host.innerHTML = '<div class="loading">Loading updates…</div>';
+    let events = null;
+    try { const r = await fetch(WEBHOOK); if (r.ok) events = (await r.json()).events || []; } catch { /* offline */ }
+    const url = `${location.origin}${WEBHOOK}`;
+    const setup = `<div class="upd-empty">
+      <p>No coin updates received yet.</p>
+      <p class="muted">This feed shows CoinGecko <code>cg.coin.info.updated</code> events — rebrands,
+      ticker/logo changes, new contract addresses, category changes and security notices.</p>
+      <p class="muted">Register this endpoint as your webhook URL with CoinGecko:</p>
+      <code class="upd-url">${esc(url)}</code></div>`;
+    if (events === null) { host.innerHTML = `<div class="upd-empty"><p>Live feed unavailable.</p><p class="muted">The webhook endpoint isn't reachable from here (it runs on Netlify Functions). Deploy the site, then register:</p><code class="upd-url">${esc(url)}</code></div>`; return; }
+    if (!events.length) { host.innerHTML = setup; return; }
+    host.innerHTML = events.map(updateCard).join('');
   }
 
   // ---------- AI Copilot ----------

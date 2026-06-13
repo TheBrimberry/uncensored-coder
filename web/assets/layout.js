@@ -12,8 +12,10 @@
     ['smart.html', 'Smart Picks'],
     ['picks.html', 'Top Picks'],
     ['discover.html', 'Discover'],
+    ['updates.html', 'Updates'],
     ['news.html', 'News'],
     ['portfolio.html', 'Portfolio'],
+    ['savings.html', 'Savings'],
     ['learn.html', 'Learn'],
   ];
   const isActive = (href) => href.split('.')[0] === page ? 'active' : '';
