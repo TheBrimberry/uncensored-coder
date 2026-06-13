@@ -8,7 +8,7 @@
 // `x-webhook-secret` header or a `?token=` query param, otherwise they're
 // rejected. With no secret configured the endpoint accepts all POSTs (dev mode).
 
-import { getStore } from '@netlify/blobs';
+import { connectLambda, getStore } from '@netlify/blobs';
 
 const KEY = 'feed';
 const MAX = 200;
@@ -34,8 +34,9 @@ async function readFeed(s) {
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors, body: '' };
 
+  // Legacy handler signature needs the Blobs runtime context wired up explicitly.
   let s;
-  try { s = store(); } catch (e) { return json(500, { error: 'blob store unavailable', detail: String(e) }); }
+  try { connectLambda(event); s = store(); } catch (e) { return json(500, { error: 'blob store unavailable', detail: String(e) }); }
 
   if (event.httpMethod === 'GET') {
     const feed = await readFeed(s);
