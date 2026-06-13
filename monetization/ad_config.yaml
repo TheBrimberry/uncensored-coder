@@ -1,0 +1,88 @@
+# 💰 Ad Monetization - Configuration
+# ---------------------------------------------------------------------------
+# Fill in the IDs for the ad networks you signed up for, set `enabled: true`,
+# and run:  python -m monetization.cli inject ./your-website
+#
+# You only need ONE network to start earning. The toolkit auto-places ad slots
+# in the highest-paying positions and lazy-loads them so the site stays fast.
+# ---------------------------------------------------------------------------
+
+site:
+  # Your domain (used for ads.txt + reporting). No https://, just the host.
+  domain: "example.com"
+  # Where the toolkit writes the generated ad loader + ads.txt
+  output_dir: "monetization/dist"
+
+# ---------------------------------------------------------------------------
+# AD NETWORKS  ("plug in whatever you gotta plug in")
+# Sign up, paste your IDs, flip `enabled` to true. Stacking networks with
+# fallback maximizes fill rate and therefore income.
+# ---------------------------------------------------------------------------
+networks:
+
+  # 1) Google AdSense — easiest to get approved, highest baseline RPM.
+  adsense:
+    enabled: false
+    publisher_id: "ca-pub-XXXXXXXXXXXXXXXX"   # from your AdSense account
+    auto_ads: true                            # let Google place extra ads too
+    # Per-placement slot IDs (create them in AdSense > Ads > By ad unit).
+    slots:
+      top_banner: "0000000001"
+      in_content: "0000000002"
+      sidebar: "0000000003"
+      sticky_footer: "0000000004"
+
+  # 2) Media.net — strong contextual ads, great as an AdSense fallback.
+  medianet:
+    enabled: false
+    customer_id: "XXXXXXXXX"
+    site_id: "XXXXXXXXX"
+
+  # 3) Ezoic — AI ad placement, usually the highest RPM once traffic grows.
+  ezoic:
+    enabled: false
+    site_id: "XXXXXX"
+
+  # 4) PropellerAds — pop-under / push, instant approval, no traffic minimum.
+  propeller:
+    enabled: false
+    zone_id: "XXXXXXX"
+
+  # 5) Direct / house ads — sell your own banners at 100% margin.
+  direct:
+    enabled: false
+    banners:
+      - image: "https://example.com/sponsor.png"
+        url: "https://sponsor.example.com"
+        placement: "in_content"
+
+# ---------------------------------------------------------------------------
+# PLACEMENTS — which ad slots to auto-inject and where.
+# These positions are ordered by typical revenue (top = highest viewability).
+# Turn off any you don't want.
+# ---------------------------------------------------------------------------
+placements:
+  top_banner:    { enabled: true,  selector: "body",            position: "afterbegin" }
+  in_content:    { enabled: true,  selector: "article, main, .content, .post", position: "afterbegin" }
+  in_content_2:  { enabled: true,  selector: "article, main, .content, .post", position: "middle" }
+  sidebar:       { enabled: true,  selector: "aside, .sidebar", position: "afterbegin" }
+  sticky_footer: { enabled: true,  selector: "body",            position: "beforeend" }
+
+# ---------------------------------------------------------------------------
+# OPTIMIZATION — knobs that move revenue.
+# ---------------------------------------------------------------------------
+optimization:
+  lazy_load: true          # load ads only as they scroll into view (faster site, better SEO)
+  lazy_margin_px: 600      # start loading 600px before the ad enters the viewport
+  sticky_footer: true      # high-RPM anchored footer ad on mobile
+  refresh_seconds: 0       # >0 auto-refreshes ads (e.g. 30). Check network policy first!
+  respect_consent: true    # show a GDPR/CCPA consent bar before personalized ads
+  min_content_words: 0     # don't show ads on near-empty pages (0 = always)
+
+# ---------------------------------------------------------------------------
+# COMPLIANCE — keep your account from getting banned.
+# ---------------------------------------------------------------------------
+compliance:
+  generate_ads_txt: true   # required by most networks to verify inventory
+  generate_consent_bar: true
+  label_ads: true          # show a small "Advertisement" label (required by AdSense)
