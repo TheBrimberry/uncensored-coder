@@ -24,7 +24,7 @@ const json = (statusCode, body, extra = {}) => ({
 });
 
 function store() {
-  return getStore({ name: 'cg-events', consistency: 'strong' });
+  return getStore('cg-events');
 }
 async function readFeed(s) {
   try { const v = await s.get(KEY, { type: 'json' }); return Array.isArray(v) ? v : []; }
