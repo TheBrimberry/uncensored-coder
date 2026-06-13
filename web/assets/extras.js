@@ -25,6 +25,16 @@ window.EXTRAS = {
     { name: 'Eclipse', symbol: 'ES', type: 'Galxe Quests', est: '$80–$600', status: 'Upcoming', deadline: '2026-08-01', action: 'Complete quests' },
     { name: 'Fogo', symbol: 'FOGO', type: 'Testnet', est: '$100–$900', status: 'Live', deadline: '2026-07-20', action: 'Validator / txs' },
   ],
+  news: [
+    { source: 'Market', time: '14m ago', tag: 'Bitcoin', title: 'Bitcoin holds above key support as ETF inflows resume', summary: 'Spot ETFs logged a third straight day of net inflows, easing fears of a deeper pullback.' },
+    { source: 'DeFi', time: '38m ago', tag: 'Ethereum', title: 'Ethereum staking ratio hits new all-time high', summary: 'Over 29% of circulating ETH is now staked as restaking demand climbs.' },
+    { source: 'Altcoins', time: '1h ago', tag: 'Solana', title: 'Solana DEX volume overtakes Ethereum for the week', summary: 'On-chain activity surged on the back of new memecoin and DePIN launches.' },
+    { source: 'Regulation', time: '2h ago', tag: 'Policy', title: 'New stablecoin framework clears committee vote', summary: 'Issuers would face reserve and audit requirements under the proposed rules.' },
+    { source: 'Layer 2', time: '3h ago', tag: 'Scaling', title: 'Rollup fees drop to record lows after blob upgrade', summary: 'Average L2 transaction costs fell below a cent across major networks.' },
+    { source: 'NFT', time: '5h ago', tag: 'Culture', title: 'On-chain gaming token leads weekly gainers', summary: 'A breakout title pushed its in-game token up triple digits on the week.' },
+    { source: 'Macro', time: '6h ago', tag: 'Markets', title: 'Risk assets rally as rate-cut odds firm up', summary: 'Crypto tracked equities higher after softer inflation data.' },
+    { source: 'Security', time: '8h ago', tag: 'Safety', title: 'Bridge exploit recovered after white-hat negotiation', summary: 'Most of the affected funds were returned within 48 hours.' },
+  ],
   articles: [
     { tag: 'Strategy', date: 'Jun 11, 2026', title: 'Cross-Exchange Arbitrage: A Practical 2026 Playbook', read: '8 min', blurb: 'How to size positions, account for withdrawal fees, and avoid the spread traps that erase profit.' },
     { tag: 'Analysis', date: 'Jun 10, 2026', title: 'Reading RSI Divergence Like a Pro', read: '6 min', blurb: 'Why price highs and momentum highs diverging is one of the most reliable reversal tells.' },

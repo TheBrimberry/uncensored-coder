@@ -3,13 +3,18 @@
   'use strict';
 
   const CG = 'https://api.coingecko.com/api/v3';
-  const API_MARKETS = CG + '/coins/markets'
-    + '?vs_currency=usd&order=market_cap_desc&per_page=100&page=1'
+  const TOP_N = 1000;            // target number of coins
+  const PER_PAGE = 250;          // CoinGecko max page size
+  const PAGES = Math.ceil(TOP_N / PER_PAGE);
+  const marketsURL = (page) => CG + '/coins/markets'
+    + `?vs_currency=usd&order=market_cap_desc&per_page=${PER_PAGE}&page=${page}`
     + '&sparkline=true&price_change_percentage=1h%2C24h%2C7d';
+  const TABLE_CAP = 150;         // max rows rendered in the big screener table
 
   const LS = {
     watch: 'cs_watch',
     alerts: 'cs_alerts',
+    portfolio: 'cs_portfolio',
   };
 
   const state = {
@@ -23,6 +28,9 @@
     arbMinPct: 0.5,
     arbBase: 'usd',
     pickHorizon: 'day',
+    predHorizon: '1m',
+    portfolio: loadLS(LS.portfolio, []),
+    convReady: false,
     global: null,
   };
 
@@ -34,6 +42,7 @@
   // ---------- helpers ----------
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const on = (sel, ev, fn) => { const el = typeof sel === 'string' ? $(sel) : sel; if (el) el.addEventListener(ev, fn); };
   function loadLS(k, def) { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch { return def; } }
   function saveLS(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } }
 
@@ -67,15 +76,21 @@
   // ---------- core market data ----------
   async function load() {
     setStatus('Loading…', '');
-    let raw;
+    let raw = [];
     try {
-      raw = await getJSON(API_MARKETS);
-      if (!Array.isArray(raw) || !raw.length) throw new Error('empty');
+      // Fetch the top N coins across paginated requests (sequential to be gentle on the free API).
+      for (let p = 1; p <= PAGES; p++) {
+        const page = await getJSON(marketsURL(p));
+        if (!Array.isArray(page) || !page.length) break;
+        raw = raw.concat(page);
+        setStatus(`Loading… ${raw.length} coins`, '');
+      }
+      if (!raw.length) throw new Error('empty');
       state.live = true;
     } catch (err) {
-      console.warn('Live API unavailable, using fallback:', err.message);
-      raw = FALLBACK_DATA;
-      state.live = false;
+      console.warn('Live API unavailable or partial, using what we have / fallback:', err.message);
+      if (!raw.length) { raw = FALLBACK_DATA; state.live = false; }
+      else { state.live = true; }
     }
     state.coins = raw.map(enrich).filter(Boolean);
     setStatus(
@@ -150,6 +165,10 @@
     renderSmart();
     renderPicks(state.pickHorizon);
     renderArbBoard();
+    renderPredictions(state.predHorizon);
+    setupConverter();
+    renderPortfolio();
+    renderCoinPage();
   }
 
   // ---------- screener ----------
@@ -179,7 +198,11 @@
 
   function renderTable() {
     const body = $('#screener-body');
-    const list = applyFilters();
+    if (!body) return;
+    const full = applyFilters();
+    const list = full.slice(0, TABLE_CAP);
+    const countEl = $('#screener-count');
+    if (countEl) countEl.textContent = `Showing ${list.length} of ${full.length} coins`;
     if (!list.length) {
       body.innerHTML = `<tr><td colspan="12" class="empty">No coins match your filters.</td></tr>`;
       return;
@@ -215,14 +238,18 @@
   }
 
   function renderTicker() {
+    const track = $('#ticker-track');
+    if (!track) return;
     const html = state.coins.slice(0, 16).map((c) =>
       `<span class="ticker__item"><span class="sym">${c.symbol}</span><span>${fmtPrice(c.price)}</span>${pct(c.ch24h)}</span>`).join('');
-    $('#ticker-track').innerHTML = html + html;
+    track.innerHTML = html + html;
   }
 
   function renderMovers() {
+    const el = $('#hero-movers');
+    if (!el) return;
     const top = [...state.coins].sort((a, b) => b.ch24h - a.ch24h).slice(0, 6);
-    $('#hero-movers').innerHTML = top.map((c) => `
+    el.innerHTML = top.map((c) => `
       <li data-id="${c.id}">
         ${c.image ? `<img class="coin-ico" src="${c.image}" alt="">` : `<span class="coin-ico" style="background:${c.color}"></span>`}
         <span class="coin-name"><b>${c.name}</b><small>${c.symbol}</small></span>
@@ -232,8 +259,10 @@
 
   const TIMEFRAMES = ['15m', '1h', '4h', '1d'];
   function renderPatterns() {
+    const el = $('#patterns-grid');
+    if (!el) return;
     const picks = [...state.coins].sort((a, b) => Math.abs(b.ch7d) - Math.abs(a.ch7d)).slice(0, 6);
-    $('#patterns-grid').innerHTML = picks.map((c, i) => {
+    el.innerHTML = picks.map((c, i) => {
       const bull = c.ch7d >= 0;
       const target = c.price * (1 + (bull ? 1 : -1) * (0.04 + Math.abs(c.ch7d) / 400));
       return `
@@ -254,9 +283,11 @@
   }
 
   function renderSetups() {
+    const el = $('#signals-grid');
+    if (!el) return;
     const buys = [...state.coins].filter((c) => c.signal === 'Strong Buy' || c.signal === 'Buy').sort((a, b) => b.score - a.score).slice(0, 3);
     const fill = buys.length ? buys : [...state.coins].sort((a, b) => b.score - a.score).slice(0, 3);
-    $('#signals-grid').innerHTML = fill.map((c) => {
+    el.innerHTML = fill.map((c) => {
       const long = c.score >= 0, entry = c.price;
       const stop = entry * (long ? 0.94 : 1.06), t1 = entry * (long ? 1.08 : 0.92), t2 = entry * (long ? 1.16 : 0.84);
       const rr = Math.abs((t1 - entry) / (entry - stop)).toFixed(1);
@@ -288,7 +319,7 @@
     renderPulseCards();
     const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
     set('#g-mcap', fmtBig(g.total_market_cap.usd));
-    $('#g-mcap-ch').innerHTML = pct(g.market_cap_change_percentage_24h_usd);
+    const mch = $('#g-mcap-ch'); if (mch) mch.innerHTML = pct(g.market_cap_change_percentage_24h_usd);
     set('#g-vol', fmtBig(g.total_volume.usd));
     set('#g-btc', g.market_cap_percentage.btc.toFixed(1) + '%');
     set('#g-eth', (g.market_cap_percentage.eth ?? 0).toFixed(1) + '%');
@@ -297,6 +328,7 @@
 
   // ---------- Fear & Greed gauge ----------
   async function loadFNG() {
+    if (!$('#fng-arc')) return;
     let v, label;
     try {
       const d = (await getJSON('https://api.alternative.me/fng/')).data[0];
@@ -322,6 +354,7 @@
 
   // ---------- Trending ----------
   async function loadTrending() {
+    if (!$('#trending-list')) return;
     let coins;
     try { coins = (await getJSON(CG + '/search/trending')).coins; }
     catch { coins = FALLBACK_TRENDING.coins; }
@@ -339,9 +372,11 @@
 
   // ---------- Heatmap ----------
   function renderHeatmap() {
+    const el = $('#heatmap');
+    if (!el) return;
     const coins = [...state.coins].sort((a, b) => b.mcap - a.mcap).slice(0, 30);
     const max = Math.max(...coins.map((c) => c.mcap)) || 1;
-    $('#heatmap').innerHTML = coins.map((c) => {
+    el.innerHTML = coins.map((c) => {
       const rel = Math.sqrt(c.mcap / max); // size factor
       const flex = (8 + rel * 28).toFixed(2);
       const ch = c.ch24h;
@@ -388,6 +423,7 @@
         <div>
           <h3 id="drawer-name">${c.name} <small class="muted">${c.symbol}</small></h3>
           <div class="dr__price">${fmtPrice(c.price)} <span>${pct(c.ch24h)} (24h)</span></div>
+          <a class="dr__fullpage" href="coin.html?id=${c.id}">Open full page →</a>
         </div>
         <span class="dr__rank">Rank #${c.rank}</span>
       </div>
@@ -770,6 +806,180 @@
     }).join('');
   }
 
+  // ---------- Price predictions (CoinCodex-style) ----------
+  const PRED_HORIZONS = [['5d', '5-Day', 5], ['1m', '1-Month', 30], ['3m', '3-Month', 90], ['1y', '1-Year', 365]];
+  function forecast(c, days) {
+    const mu = Math.max(-0.02, Math.min(0.02, (c.ch7d / 100) / 7)); // daily drift, capped ±2%
+    const damp = days <= 5 ? 1 : days <= 30 ? 0.6 : days <= 90 ? 0.38 : 0.15;
+    const skew = (c.score / 10) * (days / 365) * 0.3;
+    return Math.max(c.price * (1 + mu * days * damp + skew), c.price * 0.05);
+  }
+  function predSentiment(c) {
+    const bull = Math.max(0, Math.min(26, Math.round(13 + c.score * 2)));
+    const label = c.score >= 3 ? 'Strong Bullish' : c.score >= 1 ? 'Bullish' : c.score > -1 ? 'Neutral' : c.score > -3 ? 'Bearish' : 'Strong Bearish';
+    return { bull, bear: 26 - bull, label };
+  }
+  function renderPredictions(horizon) {
+    if (horizon) state.predHorizon = horizon;
+    const body = $('#pred-body');
+    if (!body) return;
+    const hz = PRED_HORIZONS.find((h) => h[0] === state.predHorizon) || PRED_HORIZONS[1];
+    const list = [...state.coins].slice(0, 250)
+      .sort((a, b) => (forecast(b, hz[2]) / b.price) - (forecast(a, hz[2]) / a.price))
+      .slice(0, 60);
+    body.innerHTML = list.map((c, i) => {
+      const cells = PRED_HORIZONS.map(([k, , d]) => {
+        const f = forecast(c, d), ch = (f / c.price - 1) * 100;
+        return `<td class="num ${k === state.predHorizon ? 'pred-active' : ''}">${fmtPrice(f)}<small class="${ch >= 0 ? 'pos' : 'neg'}"> ${ch >= 0 ? '+' : ''}${ch.toFixed(1)}%</small></td>`;
+      }).join('');
+      const s = predSentiment(c);
+      return `<tr data-id="${c.id}">
+        <td class="muted">${i + 1}</td>
+        <td class="mini__coin">${ICON(c)}<b>${c.symbol}</b> <small class="muted">${c.name}</small></td>
+        <td class="num">${fmtPrice(c.price)}</td>${cells}
+        <td><span class="badge badge--${c.signalCls}" title="${s.bull}/26 indicators bullish">${s.label}</span></td>
+      </tr>`;
+    }).join('');
+    $$('#pred-tabs .ptab').forEach((t) => t.classList.toggle('active', t.dataset.pred === state.predHorizon));
+  }
+
+  // ---------- Converter (CoinCodex-style) ----------
+  function priceOf(v) { if (v === 'usd') return 1; const c = state.coins.find((x) => x.id === v); return c ? c.price : null; }
+  function labelOf(v) { if (v === 'usd') return 'USD'; return (state.coins.find((c) => c.id === v) || {}).symbol || v; }
+  function setupConverter() {
+    const from = $('#cv-from'), to = $('#cv-to');
+    if (!from || !to) return;
+    if (!state.convReady && state.coins.length) {
+      const opts = `<option value="usd">USD — US Dollar</option>` +
+        state.coins.slice(0, 300).map((c) => `<option value="${c.id}">${c.symbol} — ${c.name}</option>`).join('');
+      from.innerHTML = opts; to.innerHTML = opts;
+      from.value = 'bitcoin'; to.value = 'usd';
+      state.convReady = true;
+    }
+    runConverter();
+  }
+  function runConverter() {
+    const out = $('#cv-result'); if (!out) return;
+    const amt = parseFloat(($('#cv-amount') || {}).value) || 0;
+    const from = $('#cv-from').value, to = $('#cv-to').value;
+    const pf = priceOf(from), pt = priceOf(to);
+    if (pf == null || pt == null) { out.textContent = '—'; return; }
+    const result = amt * pf / pt;
+    out.innerHTML = `${amt.toLocaleString()} ${labelOf(from)} = <b>${result.toLocaleString('en-US', { maximumFractionDigits: 8 })} ${labelOf(to)}</b>`;
+    const rate = $('#cv-rate');
+    if (rate) rate.textContent = `1 ${labelOf(from)} = ${(pf / pt).toLocaleString('en-US', { maximumFractionDigits: 8 })} ${labelOf(to)}  ·  1 ${labelOf(to)} = ${(pt / pf).toLocaleString('en-US', { maximumFractionDigits: 8 })} ${labelOf(from)}`;
+  }
+
+  // ---------- News ----------
+  function renderNews() {
+    const el = $('#news-grid'); if (!el) return;
+    el.innerHTML = (window.EXTRAS?.news || []).map((n) => `
+      <a class="article" href="#" onclick="return false">
+        <div class="article__top"><span class="edu__tag">${n.source}</span><span class="muted">${n.time}</span></div>
+        <h4>${n.title}</h4>
+        <p class="muted">${n.summary}</p>
+        <span class="muted article__date">${n.tag || ''}</span>
+      </a>`).join('');
+  }
+
+  // ---------- Portfolio ----------
+  function renderPortfolio() {
+    const sel = $('#pf-coin');
+    if (sel && !sel.dataset.filled && state.coins.length) {
+      sel.innerHTML = state.coins.slice(0, 300).map((c) => `<option value="${c.id}">${c.symbol} — ${c.name}</option>`).join('');
+      sel.dataset.filled = '1';
+    }
+    const body = $('#pf-body'); if (!body) return;
+    const holdings = state.portfolio.map((h) => {
+      const c = state.coins.find((x) => x.id === h.id);
+      return c ? { ...h, c, value: h.amount * c.price } : null;
+    }).filter(Boolean);
+    const total = holdings.reduce((a, h) => a + h.value, 0);
+    const totalCh = holdings.reduce((a, h) => a + h.value * (h.c.ch24h / 100), 0);
+
+    const sum = $('#pf-summary');
+    if (sum) sum.innerHTML = `
+      <div class="arb__stat"><span>Total value</span><b>${fmtPrice(total)}</b><small class="muted">${holdings.length} asset${holdings.length === 1 ? '' : 's'}</small></div>
+      <div class="arb__stat"><span>24h change</span><b class="${totalCh >= 0 ? 'pos' : 'neg'}">${fmtPrice(totalCh)}</b><small class="${totalCh >= 0 ? 'pos' : 'neg'}">${total ? ((totalCh / total) * 100).toFixed(2) : '0'}%</small></div>
+      <div class="arb__stat"><span>Best performer</span><b>${holdings.length ? [...holdings].sort((a, b) => b.c.ch24h - a.c.ch24h)[0].c.symbol : '—'}</b></div>`;
+
+    if (!holdings.length) {
+      body.innerHTML = `<tr><td colspan="7" class="empty">No holdings yet — add a coin above to track your portfolio.</td></tr>`;
+      return;
+    }
+    body.innerHTML = holdings.sort((a, b) => b.value - a.value).map((h) => {
+      const alloc = total ? (h.value / total) * 100 : 0;
+      return `<tr data-id="${h.c.id}">
+        <td class="mini__coin">${ICON(h.c)}<b>${h.c.symbol}</b> <small class="muted">${h.c.name}</small></td>
+        <td class="num">${h.amount.toLocaleString('en-US', { maximumFractionDigits: 8 })}</td>
+        <td class="num">${fmtPrice(h.c.price)}</td>
+        <td class="num">${pct(h.c.ch24h)}</td>
+        <td class="num">${fmtPrice(h.value)}</td>
+        <td class="num">${alloc.toFixed(1)}%</td>
+        <td><button class="link-btn" data-remove="${h.c.id}">remove</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ---------- Coin detail page (CoinCodex-style) ----------
+  async function renderCoinPage() {
+    const host = $('#coin-page'); if (!host) return;
+    const params = new URLSearchParams(location.search);
+    let id = params.get('id');
+    if (!id) { const sym = (params.get('symbol') || '').toUpperCase(); const m = state.coins.find((x) => x.symbol === sym); id = m ? m.id : 'bitcoin'; }
+    const c = state.coins.find((x) => x.id === id);
+    if (!c) { host.innerHTML = `<p class="muted">Coin not found in the top ${state.coins.length}.</p>`; return; }
+    document.title = `${c.name} (${c.symbol}) — CoinScope`;
+
+    let prices = c.prices;
+    try {
+      const d = await getJSON(`${CG}/coins/${id}/market_chart?vs_currency=usd&days=90&interval=daily`);
+      if (d.prices && d.prices.length) prices = d.prices.map((p) => p[1]);
+    } catch { /* keep sparkline */ }
+    const rsi = TA.rsi(prices) ?? c.rsi, sma20 = TA.sma(prices, Math.min(20, prices.length)), sma50 = TA.sma(prices, Math.min(50, prices.length));
+    const s = predSentiment(c);
+
+    host.innerHTML = `
+      <div class="dr__head">
+        ${c.image ? `<img class="coin-ico coin-ico--lg" src="${c.image}" alt="">` : `<span class="coin-ico coin-ico--lg" style="background:${c.color}"></span>`}
+        <div><h1 id="drawer-name" style="font-size:1.6rem">${c.name} <small class="muted">${c.symbol}</small></h1>
+          <div class="dr__price" style="font-size:1.3rem">${fmtPrice(c.price)} <span>${pct(c.ch24h)} (24h)</span></div></div>
+        <span class="dr__rank">Rank #${c.rank}</span>
+      </div>
+      ${areaSVG(prices, c.ch7d >= 0)}
+      <h3 class="arb__deep-title">Price prediction</h3>
+      <div class="pred-cards">${PRED_HORIZONS.map(([, lbl, d]) => {
+        const f = forecast(c, d), ch = (f / c.price - 1) * 100;
+        return `<div class="arb__stat"><span>${lbl}</span><b>${fmtPrice(f)}</b><small class="${ch >= 0 ? 'pos' : 'neg'}">${ch >= 0 ? '+' : ''}${ch.toFixed(1)}%</small></div>`;
+      }).join('')}</div>
+      <div class="techsum">
+        <div class="techsum__verdict">
+          <span class="muted">Technical sentiment</span>
+          <b class="${c.score >= 1 ? 'pos' : c.score <= -1 ? 'neg' : ''}">${s.label}</b>
+          <small class="muted">${s.bull} bullish · ${s.bear} bearish of 26 signals</small>
+        </div>
+        <div class="techsum__bar"><span class="pos" style="width:${(s.bull / 26 * 100).toFixed(0)}%"></span><span class="neg" style="width:${(s.bear / 26 * 100).toFixed(0)}%"></span></div>
+      </div>
+      <h3 class="arb__deep-title">Key statistics</h3>
+      <div class="dr__stats">
+        <div><span>Signal</span><b>${badge(c)}</b></div>
+        <div><span>RSI(14)</span><b>${rsi == null ? '—' : rsi.toFixed(0)}</b></div>
+        <div><span>Pattern</span><b class="pattern-tag">${c.pattern}</b></div>
+        <div><span>SMA20</span><b>${sma20 ? fmtPrice(sma20) : '—'}</b></div>
+        <div><span>SMA50</span><b>${sma50 ? fmtPrice(sma50) : '—'}</b></div>
+        <div><span>Trend</span><b class="${c.trend === 'up' ? 'pos' : 'neg'}">${c.trend === 'up' ? 'Up' : 'Down'}</b></div>
+        <div><span>Market Cap</span><b>${fmtBig(c.mcap)}</b></div>
+        <div><span>24h Volume</span><b>${fmtBig(c.vol)}</b></div>
+        <div><span>24h High</span><b>${c.high24 ? fmtPrice(c.high24) : '—'}</b></div>
+        <div><span>24h Low</span><b>${c.low24 ? fmtPrice(c.low24) : '—'}</b></div>
+        <div><span>ATH</span><b>${c.ath ? fmtPrice(c.ath) : '—'}</b></div>
+        <div><span>From ATH</span><b>${c.athChange != null ? pct(c.athChange) : '—'}</b></div>
+        <div><span>Valuation</span><b class="${c.valuation < -15 ? 'pos' : c.valuation > 25 ? 'neg' : ''}">${c.valuation < -15 ? 'Undervalued' : c.valuation > 25 ? 'Overvalued' : 'Fair'}</b></div>
+        <div><span>Explosion score</span><b class="escore">${c.explode}</b></div>
+        <div><span>Circ. supply</span><b>${c.supply ? c.supply.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'}</b></div>
+      </div>`;
+  }
+
   // ---------- AI Copilot ----------
   function copilotAnswer(text) {
     const t = text.toLowerCase();
@@ -840,19 +1050,20 @@
 
   function setStatus(text, cls) {
     const el = $('#data-status');
+    if (!el) return;
     el.textContent = text;
     el.className = 'screener__status ' + (cls || '');
   }
 
   // ---------- events ----------
   function bind() {
-    $('#search').addEventListener('input', (e) => { state.filters.q = e.target.value; renderTable(); });
-    $('#signal-filter').addEventListener('change', (e) => { state.filters.signal = e.target.value; renderTable(); });
-    $('#cap-filter').addEventListener('change', (e) => { state.filters.cap = +e.target.value; renderTable(); });
-    $('#trend-filter').addEventListener('change', (e) => { state.filters.trend = e.target.value; renderTable(); });
-    $('#refresh').addEventListener('click', () => { load(); loadGlobal(); loadFNG(); loadTrending(); });
+    on('#search', 'input', (e) => { state.filters.q = e.target.value; renderTable(); });
+    on('#signal-filter', 'change', (e) => { state.filters.signal = e.target.value; renderTable(); });
+    on('#cap-filter', 'change', (e) => { state.filters.cap = +e.target.value; renderTable(); });
+    on('#trend-filter', 'change', (e) => { state.filters.trend = e.target.value; renderTable(); });
+    on('#refresh', 'click', () => { load(); loadGlobal(); loadFNG(); loadTrending(); });
 
-    $('#watch-toggle').addEventListener('click', (e) => {
+    on('#watch-toggle', 'click', (e) => {
       state.filters.watchOnly = !state.filters.watchOnly;
       e.currentTarget.classList.toggle('active', state.filters.watchOnly);
       renderTable();
@@ -875,34 +1086,63 @@
         const id = deep.dataset.deep;
         const sel = $('#arb-coin'); if (sel) sel.value = id;
         scanArb(id);
-        document.getElementById('arb-summary').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const sum = $('#arb-summary'); if (sum) sum.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
       }
       const row = e.target.closest('[data-id]');
       if (row && !e.target.closest('a,button,select,input')) openDrawer(row.dataset.id);
     });
 
-    $('#drawer-close').addEventListener('click', closeDrawer);
-    $('#drawer-overlay').addEventListener('click', closeDrawer);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#drawer').hidden) closeDrawer(); });
+    on('#drawer-close', 'click', closeDrawer);
+    on('#drawer-overlay', 'click', closeDrawer);
+    document.addEventListener('keydown', (e) => { const d = $('#drawer'); if (e.key === 'Escape' && d && !d.hidden) closeDrawer(); });
 
     // Arbitrage opportunities board controls
-    $('#arb-min').addEventListener('input', (e) => {
+    on('#arb-min', 'input', (e) => {
       state.arbMinPct = +e.target.value;
-      $('#arb-min-label').textContent = state.arbMinPct.toFixed(1) + '%';
+      const lbl = $('#arb-min-label'); if (lbl) lbl.textContent = state.arbMinPct.toFixed(1) + '%';
       renderArbBoard();
     });
-    $('#arb-base').addEventListener('change', (e) => { state.arbBase = e.target.value; renderArbBoard(); });
-    $('#arb-refresh').addEventListener('click', renderArbBoard);
+    on('#arb-base', 'change', (e) => { state.arbBase = e.target.value; renderArbBoard(); });
+    on('#arb-refresh', 'click', renderArbBoard);
 
     // Deep scan controls
-    $('#arb-coin').addEventListener('change', (e) => scanArb(e.target.value));
-    $('#arb-scan').addEventListener('click', () => scanArb(state.arbCoin));
+    on('#arb-coin', 'change', (e) => scanArb(e.target.value));
+    on('#arb-scan', 'click', () => scanArb(state.arbCoin));
 
     // Top picks tabs
     $$('#picks-tabs .ptab').forEach((t) => t.addEventListener('click', () => renderPicks(t.dataset.pick)));
 
-    $('#copilot-form').addEventListener('submit', (e) => {
+    // Predictions horizon tabs
+    $$('#pred-tabs .ptab').forEach((t) => t.addEventListener('click', () => renderPredictions(t.dataset.pred)));
+
+    // Converter
+    on('#cv-amount', 'input', runConverter);
+    on('#cv-from', 'change', runConverter);
+    on('#cv-to', 'change', runConverter);
+    on('#cv-swap', 'click', () => {
+      const f = $('#cv-from'), t = $('#cv-to');
+      if (f && t) { const tmp = f.value; f.value = t.value; t.value = tmp; runConverter(); }
+    });
+
+    // Portfolio
+    on('#pf-form', 'submit', (e) => {
+      e.preventDefault();
+      const id = $('#pf-coin').value, amt = parseFloat($('#pf-amount').value);
+      if (!id || !amt || amt <= 0) { toast('Enter a coin and a valid amount.', 'warn'); return; }
+      state.portfolio = state.portfolio.filter((h) => h.id !== id);
+      state.portfolio.push({ id, amount: amt });
+      saveLS(LS.portfolio, state.portfolio);
+      $('#pf-amount').value = '';
+      renderPortfolio();
+      toast('Added to portfolio.', 'ok');
+    });
+    on('#pf-table', 'click', (e) => {
+      const rm = e.target.closest('[data-remove]');
+      if (rm) { state.portfolio = state.portfolio.filter((h) => h.id !== rm.dataset.remove); saveLS(LS.portfolio, state.portfolio); renderPortfolio(); }
+    });
+
+    on('#copilot-form', 'submit', (e) => {
       e.preventDefault();
       const input = $('#copilot-input'), q = input.value.trim();
       if (!q) return;
@@ -910,9 +1150,9 @@
       setTimeout(() => pushBubble(copilotAnswer(q), 'bot'), 350);
     });
     $$('.chip').forEach((chip) => chip.addEventListener('click', () => {
-      $('#copilot-input').value = chip.dataset.q;
+      const ci = $('#copilot-input'); if (!ci) return;
+      ci.value = chip.dataset.q;
       $('#copilot-form').dispatchEvent(new Event('submit'));
-      document.getElementById('copilot').scrollIntoView({ behavior: 'smooth' });
     }));
   }
 
@@ -920,6 +1160,7 @@
   bind();
   renderDiscover();
   renderArticles();
+  renderNews();
   load();
   loadGlobal();
   loadFNG();

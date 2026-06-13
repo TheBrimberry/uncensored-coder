@@ -415,3 +415,57 @@ img.coin-ico { object-fit: cover; }
   .pulse__grid, .picks__grid, .articles__grid { grid-template-columns: 1fr; }
   .arb__controls { flex-wrap: wrap; }
 }
+
+/* ===== Explore cards (home) ===== */
+.explore { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; padding-bottom: 1rem; }
+.exp { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.3rem; transition: .2s; }
+.exp:hover { border-color: var(--accent); transform: translateY(-3px); }
+.exp__ic { font-size: 1.6rem; }
+.exp h3 { font-size: 1.05rem; margin: .5rem 0 .3rem; }
+.exp p { color: var(--muted); font-size: .85rem; margin: 0; }
+
+/* ===== Nav burger ===== */
+.nav__burger { display: none; background: var(--panel); border: 1px solid var(--border); color: var(--text); width: 38px; height: 38px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; }
+
+/* ===== Converter ===== */
+.cv-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.6rem; max-width: 760px; }
+.cv-row { display: grid; grid-template-columns: 1fr 1.2fr auto 1.2fr; gap: 1rem; align-items: end; }
+.cv-field { display: flex; flex-direction: column; gap: .4rem; }
+.cv-field label { font-size: .8rem; }
+.cv-swap { align-self: end; height: 42px; }
+.cv-result { font-size: 1.6rem; font-weight: 800; margin-top: 1.4rem; }
+.cv-rate { font-size: .85rem; margin-top: .4rem; }
+
+/* ===== Predictions ===== */
+.pred-active { background: rgba(45,212,191,.07); }
+.grid td small { font-size: .72rem; }
+.pred-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+/* ===== Coin page ===== */
+.coinpage__back { display: inline-block; margin-bottom: 1rem; font-size: .88rem; }
+.dr__fullpage { display: inline-block; margin-top: .3rem; font-size: .82rem; color: var(--accent); }
+.techsum { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.3rem; margin: 1rem 0 1.4rem; }
+.techsum__verdict b { font-size: 1.2rem; display: block; margin: .1rem 0; }
+.techsum__verdict small { display: block; }
+.techsum__bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: .7rem; background: var(--panel-2); }
+.techsum__bar span.pos { background: var(--green); }
+.techsum__bar span.neg { background: var(--red); }
+
+/* ===== Portfolio ===== */
+.pf-form { display: grid; grid-template-columns: 1.5fr 1fr auto; gap: .7rem; max-width: 640px; margin-bottom: 1.4rem; }
+
+/* ===== Smart legend ===== */
+.smart__legend { margin-top: 1.4rem; font-size: .85rem; display: grid; gap: .4rem; }
+
+/* ===== Responsive (pages) ===== */
+@media (max-width: 1100px) { .explore { grid-template-columns: repeat(2, 1fr); } .pred-cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 760px) {
+  .explore { grid-template-columns: 1fr; }
+  .cv-row { grid-template-columns: 1fr; }
+  .cv-swap { justify-self: center; }
+  .pf-form { grid-template-columns: 1fr; }
+  .nav__burger { display: inline-flex; align-items: center; justify-content: center; }
+  .nav__links { position: absolute; top: 64px; left: 0; right: 0; background: var(--bg-2); border-bottom: 1px solid var(--border); flex-direction: column; gap: 0; padding: .5rem 1rem; display: none; }
+  .nav__links.open { display: flex; }
+  .nav__links a { padding: .6rem 0; }
+}

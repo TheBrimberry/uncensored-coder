@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arbitrage Scanner — CoinScope</title>
+  <meta name="description" content="Market-wide crypto arbitrage scanner across exchanges. Find the cheapest place to buy and priciest to sell, with spread % and profit per $1,000." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="arbitrage">
+  <div id="app-chrome"></div>
+
+  <section class="arbitrage" id="arbitrage">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Arbitrage Opportunities</h2><p class="muted">Market-wide scan across 8 exchanges. Buy on the <span class="neg">cheapest (red)</span>, sell on the <span class="pos">priciest (green)</span> — the spread is your edge.</p></div>
+        <div class="arb__controls">
+          <label class="arb__base">Base
+            <select class="input" id="arb-base" aria-label="Base currency"><option value="usd">USD</option><option value="btc">BTC</option></select>
+          </label>
+          <label class="arb__slider">Min spread <b id="arb-min-label">0.5%</b>
+            <input type="range" id="arb-min" min="0" max="5" step="0.1" value="0.5" />
+          </label>
+          <button class="btn btn--ghost" id="arb-refresh">↻ Rescan</button>
+        </div>
+      </div>
+
+      <div class="arb__board-meta muted" id="arb-board-meta"></div>
+      <div class="table-wrap">
+        <table class="grid" id="arb-board-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Coin</th><th class="num">Buy price</th><th>Buy at (low)</th>
+              <th class="num">Sell price</th><th>Sell at (high)</th><th class="num">Spread</th>
+              <th class="num">Profit / $1k</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="arb-board-body"><tr><td colspan="9" class="loading">Scanning the market…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="arb__deep-title">Deep scan — every exchange for one coin</h3>
+      <div class="arb__controls arb__controls--deep">
+        <select class="input" id="arb-coin" aria-label="Select coin"></select>
+        <button class="btn btn--ghost" id="arb-scan">↻ Scan exchanges</button>
+      </div>
+      <div class="arb__summary" id="arb-summary"></div>
+      <div class="table-wrap">
+        <table class="grid" id="arb-table">
+          <thead>
+            <tr><th>Exchange</th><th>Pair</th><th class="num">Price (USD)</th><th class="num">Spread vs low</th><th class="num">24h Volume</th><th>Trust</th><th>Action</th></tr>
+          </thead>
+          <tbody id="arb-body"><tr><td colspan="7" class="loading">Select a coin and scan…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="arb__note muted">Spreads exclude trading/withdrawal fees, transfer time and slippage. The opportunities board uses a deterministic model across exchanges; the deep scan uses live CoinGecko market data. Not financial advice.</p>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

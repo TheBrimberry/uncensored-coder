@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Picks — CoinScope</title>
+  <meta name="description" content="Model-driven crypto picks: most undervalued and overvalued coins, plus the coins most likely to explode based on momentum and turnover." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="smart">
+  <div id="app-chrome"></div>
+  <section class="smart" id="smart">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Smart Picks</h2><p class="muted">Model-driven scores — valuation vs ATH/RSI, and a momentum-based "explosion" score. Educational, not advice.</p></div>
+      </div>
+      <div class="smart__grid">
+        <div class="card"><h3 class="card__title pos">💎 Most Undervalued</h3><div id="smart-under"></div></div>
+        <div class="card"><h3 class="card__title neg">🎈 Most Overvalued</h3><div id="smart-over"></div></div>
+        <div class="card card--explode"><h3 class="card__title">🚀 Most Likely to Explode</h3><div id="smart-explode"></div></div>
+      </div>
+      <div class="smart__legend muted">
+        <p><b>Valuation</b> blends distance from all-time high with RSI: deeply discounted + oversold trends toward <span class="pos">undervalued</span>; near ATH + overbought trends toward <span class="neg">overvalued</span>.</p>
+        <p><b>Explosion score (0–100)</b> rewards high volume-to-cap turnover, building momentum, oversold-bounce setups, smaller caps with room to run, and bullish chart structure.</p>
+      </div>
+    </div>
+  </section>
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

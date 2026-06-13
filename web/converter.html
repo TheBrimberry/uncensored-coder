@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Converter — CoinScope</title>
+  <meta name="description" content="Convert any cryptocurrency to any other coin or to USD using live market prices." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="converter">
+  <div id="app-chrome"></div>
+  <section class="converter" id="converter">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Crypto Converter</h2><p class="muted">Convert any coin to any coin — or to USD — at live market prices.</p></div>
+      </div>
+      <div class="cv-card">
+        <div class="cv-row">
+          <div class="cv-field">
+            <label class="muted">Amount</label>
+            <input class="input" id="cv-amount" type="number" step="any" value="1" />
+          </div>
+          <div class="cv-field">
+            <label class="muted">From</label>
+            <select class="input" id="cv-from"></select>
+          </div>
+          <button class="btn btn--ghost cv-swap" id="cv-swap" title="Swap" aria-label="Swap">⇄</button>
+          <div class="cv-field">
+            <label class="muted">To</label>
+            <select class="input" id="cv-to"></select>
+          </div>
+        </div>
+        <div class="cv-result" id="cv-result">—</div>
+        <div class="cv-rate muted" id="cv-rate"></div>
+      </div>
+      <p class="arb__note muted">Conversions use mid-market prices and exclude exchange fees and spreads.</p>
+    </div>
+  </section>
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

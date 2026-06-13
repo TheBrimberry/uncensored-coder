@@ -3,71 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CoinScope — Crypto Analytics & Screener Platform</title>
-  <meta name="description" content="Scan, analyze and trade 3,000+ cryptocurrencies. AI chart patterns, 150+ technical indicators, trading signals and a live market screener." />
+  <title>CoinScope — Crypto Analytics, Screener, Arbitrage & Predictions</title>
+  <meta name="description" content="Scan 1,000+ cryptocurrencies, find arbitrage opportunities, read AI chart patterns, get price predictions and track your portfolio — all in one place." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/styles.css" />
 </head>
-<body>
-  <!-- ===== Top nav ===== -->
-  <header class="nav" id="top">
-    <div class="container nav__inner">
-      <a class="brand" href="#top">
-        <span class="brand__mark">◈</span>
-        <span class="brand__name">CoinScope</span>
-      </a>
-      <nav class="nav__links">
-        <a href="#pulse">Pulse</a>
-        <a href="#screener">Screener</a>
-        <a href="#arbitrage">Arbitrage</a>
-        <a href="#smart">Smart Picks</a>
-        <a href="#picks">Top Picks</a>
-        <a href="#discover">Discover</a>
-        <a href="#learn">Learn</a>
-      </nav>
-      <div class="nav__actions">
-        <a class="btn btn--ghost" href="#screener">Log in</a>
-        <a class="btn btn--primary" href="#pricing">Get started free</a>
-      </div>
-    </div>
-  </header>
-
-  <!-- ===== Market ticker ===== -->
-  <div class="ticker" id="ticker" aria-label="Live market ticker">
-    <div class="ticker__track" id="ticker-track"></div>
-  </div>
-
-  <!-- ===== Global market stats bar ===== -->
-  <div class="globalbar">
-    <div class="container globalbar__inner" id="globalbar">
-      <span class="globalbar__item"><span class="muted">Market Cap</span> <b id="g-mcap">—</b> <span id="g-mcap-ch"></span></span>
-      <span class="globalbar__item"><span class="muted">24h Vol</span> <b id="g-vol">—</b></span>
-      <span class="globalbar__item"><span class="muted">BTC Dom</span> <b id="g-btc">—</b></span>
-      <span class="globalbar__item"><span class="muted">ETH Dom</span> <b id="g-eth">—</b></span>
-      <span class="globalbar__item"><span class="muted">Coins</span> <b id="g-coins">—</b></span>
-    </div>
-  </div>
+<body data-page="index">
+  <div id="app-chrome"></div>
 
   <!-- ===== Hero ===== -->
   <section class="hero">
     <div class="container hero__inner">
       <div class="hero__copy">
-        <span class="pill">⚡ 150+ indicators · 26 AI chart patterns · 3,000+ coins</span>
-        <h1>The crypto analytics platform that finds <span class="grad">winning trades</span> for you.</h1>
+        <span class="pill">⚡ 1,000 coins · 150+ indicators · predictions · arbitrage</span>
+        <h1>Every crypto edge, on <span class="grad">one platform</span>.</h1>
         <p class="hero__sub">
-          Scan thousands of cryptocurrencies with 120+ technical filters, get AI-detected
-          chart patterns in real time, and act on expert trade setups — all in one place.
+          Screen 1,000+ coins with technical filters, scan cross-exchange arbitrage,
+          read AI chart patterns, forecast prices and track your portfolio — live.
         </p>
         <div class="hero__cta">
-          <a class="btn btn--primary btn--lg" href="#screener">Launch the screener</a>
-          <a class="btn btn--ghost btn--lg" href="#copilot">Try AI Copilot</a>
+          <a class="btn btn--primary btn--lg" href="screener.html">Launch the screener</a>
+          <a class="btn btn--ghost btn--lg" href="arbitrage.html">Find arbitrage</a>
         </div>
         <div class="hero__stats">
-          <div><strong id="stat-coins">3,000+</strong><span>Coins tracked</span></div>
+          <div><strong id="stat-coins">1,000</strong><span>Coins tracked</span></div>
           <div><strong>150+</strong><span>Indicators</span></div>
-          <div><strong>26</strong><span>AI patterns</span></div>
+          <div><strong>8</strong><span>Exchanges</span></div>
           <div><strong>24/7</strong><span>Market scan</span></div>
         </div>
       </div>
@@ -77,35 +40,23 @@
             <span class="dot dot--g"></span><span class="dot dot--y"></span><span class="dot dot--r"></span>
             <span class="glass__title">Top movers · 24h</span>
           </div>
-          <ul class="movers" id="hero-movers">
-            <li class="movers__skeleton">Loading live market data…</li>
-          </ul>
+          <ul class="movers" id="hero-movers"><li class="movers__skeleton">Loading live market data…</li></ul>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ===== Features ===== -->
-  <section class="features container">
-    <div class="feature">
-      <div class="feature__ic">🔎</div>
-      <h3>Crypto Screener</h3>
-      <p>Filter 8,000+ coins with 120+ technical indicators — RSI, MACD, moving averages and more.</p>
-    </div>
-    <div class="feature">
-      <div class="feature__ic">📐</div>
-      <h3>AI Chart Patterns</h3>
-      <p>An engine that scans the market 24/7 and detects 26 classic patterns with price targets.</p>
-    </div>
-    <div class="feature">
-      <div class="feature__ic">🎯</div>
-      <h3>Trade Setups</h3>
-      <p>Expert setups with clear entry, stop-loss and take-profit levels on top cryptocurrencies.</p>
-    </div>
-    <div class="feature">
-      <div class="feature__ic">🤖</div>
-      <h3>AI Copilot</h3>
-      <p>Describe what you want in plain English and Copilot builds the screener filters for you.</p>
+  <!-- ===== Explore cards ===== -->
+  <section class="container">
+    <div class="explore">
+      <a class="exp" href="pulse.html"><span class="exp__ic">📊</span><h3>Market Pulse</h3><p>Winners, losers, volume, sentiment &amp; RSI extremes.</p></a>
+      <a class="exp" href="screener.html"><span class="exp__ic">🔎</span><h3>Screener</h3><p>Filter 1,000 coins by 120+ technical signals.</p></a>
+      <a class="exp" href="arbitrage.html"><span class="exp__ic">⚖️</span><h3>Arbitrage</h3><p>Cross-exchange spreads &amp; profit per $1k.</p></a>
+      <a class="exp" href="predictions.html"><span class="exp__ic">🔮</span><h3>Predictions</h3><p>5-day to 1-year price forecasts.</p></a>
+      <a class="exp" href="converter.html"><span class="exp__ic">🔄</span><h3>Converter</h3><p>Convert any coin to any coin, live.</p></a>
+      <a class="exp" href="smart.html"><span class="exp__ic">💎</span><h3>Smart Picks</h3><p>Under/over-valued &amp; most likely to explode.</p></a>
+      <a class="exp" href="discover.html"><span class="exp__ic">🆕</span><h3>Discover</h3><p>New listings, launches &amp; airdrops.</p></a>
+      <a class="exp" href="portfolio.html"><span class="exp__ic">💼</span><h3>Portfolio</h3><p>Track holdings, value &amp; allocation.</p></a>
     </div>
   </section>
 
@@ -113,10 +64,8 @@
   <section class="overview" id="overview">
     <div class="container">
       <div class="section-head">
-        <div>
-          <h2>Market Overview</h2>
-          <p class="muted">Sentiment, trending coins and a live heatmap of the top market.</p>
-        </div>
+        <div><h2>Market Overview</h2><p class="muted">Sentiment, trending coins and a live heatmap of the top market.</p></div>
+        <a class="btn btn--ghost" href="pulse.html">Full market pulse →</a>
       </div>
       <div class="overview__grid">
         <div class="card fng">
@@ -143,392 +92,11 @@
     </div>
   </section>
 
-  <!-- ===== Market Pulse (cryptopulse) ===== -->
-  <section class="pulse" id="pulse">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Market Pulse</h2>
-          <p class="muted">The market at a glance — winners, losers, volume leaders, sentiment and RSI extremes.</p>
-        </div>
-      </div>
-      <div class="pulse__cards" id="pulse-cards"></div>
-      <div class="pulse__grid">
-        <div class="card pulsetable"><h3 class="card__title pos">📈 Most Increased · 24h</h3><div id="pulse-gainers"></div></div>
-        <div class="card pulsetable"><h3 class="card__title neg">📉 Most Decreased · 24h</h3><div id="pulse-losers"></div></div>
-        <div class="card pulsetable"><h3 class="card__title">🔊 Top Volume</h3><div id="pulse-volume"></div></div>
-        <div class="card pulsetable"><h3 class="card__title pos">🟢 Top Bullish</h3><div id="pulse-bullish"></div></div>
-        <div class="card pulsetable"><h3 class="card__title neg">🔴 Top Bearish</h3><div id="pulse-bearish"></div></div>
-        <div class="card pulsetable"><h3 class="card__title">💧 Lowest RSI · oversold</h3><div id="pulse-oversold"></div></div>
-        <div class="card pulsetable"><h3 class="card__title">🔥 Highest RSI · overbought</h3><div id="pulse-overbought"></div></div>
-        <div class="card pulsetable"><h3 class="card__title">⚡ Top Volume / Cap</h3><div id="pulse-volcap"></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Screener ===== -->
-  <section class="screener" id="screener">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Live Crypto Screener</h2>
-          <p class="muted">Real market data with on-the-fly RSI, trend and momentum signals. Click a column to sort.</p>
-        </div>
-        <div class="screener__status" id="data-status">Loading…</div>
-      </div>
-
-      <div class="toolbar">
-        <input class="input" id="search" type="search" placeholder="Search coin or symbol…" autocomplete="off" />
-        <select class="input" id="signal-filter" aria-label="Filter by signal">
-          <option value="">All signals</option>
-          <option value="Strong Buy">Strong Buy</option>
-          <option value="Buy">Buy</option>
-          <option value="Neutral">Neutral</option>
-          <option value="Sell">Sell</option>
-          <option value="Strong Sell">Strong Sell</option>
-        </select>
-        <select class="input" id="cap-filter" aria-label="Filter by market cap">
-          <option value="0">Any market cap</option>
-          <option value="10000000000">&gt; $10B</option>
-          <option value="1000000000">&gt; $1B</option>
-          <option value="100000000">&gt; $100M</option>
-        </select>
-        <select class="input" id="trend-filter" aria-label="Filter by trend">
-          <option value="">Any trend</option>
-          <option value="up">Uptrend (price &gt; SMA)</option>
-          <option value="down">Downtrend (price &lt; SMA)</option>
-        </select>
-        <button class="btn btn--ghost" id="watch-toggle">★ Watchlist</button>
-        <button class="btn btn--ghost" id="refresh">↻ Refresh</button>
-      </div>
-
-      <div class="table-wrap">
-        <table class="grid" id="screener-table">
-          <thead>
-            <tr>
-              <th class="star-col"></th>
-              <th data-sort="rank" class="num">#</th>
-              <th data-sort="name">Coin</th>
-              <th data-sort="price" class="num">Price</th>
-              <th data-sort="ch1h" class="num">1h</th>
-              <th data-sort="ch24h" class="num">24h</th>
-              <th data-sort="ch7d" class="num">7d</th>
-              <th data-sort="rsi" class="num">RSI(14)</th>
-              <th data-sort="signal">Signal</th>
-              <th data-sort="pattern">Pattern</th>
-              <th data-sort="mcap" class="num">Market Cap</th>
-              <th>7d chart</th>
-            </tr>
-          </thead>
-          <tbody id="screener-body">
-            <tr><td colspan="12" class="loading">Fetching live market data…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Arbitrage scanner ===== -->
-  <section class="arbitrage" id="arbitrage">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Arbitrage Opportunities</h2>
-          <p class="muted">Market-wide scan across 8 exchanges. Buy on the <span class="neg">cheapest (red)</span>, sell on the <span class="pos">priciest (green)</span> — the spread is your edge.</p>
-        </div>
-        <div class="arb__controls">
-          <label class="arb__base">Base
-            <select class="input" id="arb-base" aria-label="Base currency">
-              <option value="usd">USD</option>
-              <option value="btc">BTC</option>
-            </select>
-          </label>
-          <label class="arb__slider">Min spread <b id="arb-min-label">0.5%</b>
-            <input type="range" id="arb-min" min="0" max="5" step="0.1" value="0.5" />
-          </label>
-          <button class="btn btn--ghost" id="arb-refresh">↻ Rescan</button>
-        </div>
-      </div>
-
-      <div class="arb__board-meta muted" id="arb-board-meta"></div>
-      <div class="table-wrap">
-        <table class="grid" id="arb-board-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Coin</th>
-              <th class="num">Buy price</th>
-              <th>Buy at (low)</th>
-              <th class="num">Sell price</th>
-              <th>Sell at (high)</th>
-              <th class="num">Spread</th>
-              <th class="num">Profit / $1k</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="arb-board-body">
-            <tr><td colspan="9" class="loading">Scanning the market…</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3 class="arb__deep-title">Deep scan — every exchange for one coin</h3>
-      <div class="arb__controls arb__controls--deep">
-        <select class="input" id="arb-coin" aria-label="Select coin"></select>
-        <button class="btn btn--ghost" id="arb-scan">↻ Scan exchanges</button>
-      </div>
-      <div class="arb__summary" id="arb-summary"></div>
-      <div class="table-wrap">
-        <table class="grid" id="arb-table">
-          <thead>
-            <tr>
-              <th>Exchange</th>
-              <th>Pair</th>
-              <th class="num">Price (USD)</th>
-              <th class="num">Spread vs low</th>
-              <th class="num">24h Volume</th>
-              <th>Trust</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="arb-body">
-            <tr><td colspan="7" class="loading">Select a coin and scan…</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="arb__note muted">Spreads exclude trading/withdrawal fees, transfer time and slippage. The opportunities board uses a deterministic model across exchanges; the deep scan uses live CoinGecko market data. Not financial advice.</p>
-    </div>
-  </section>
-
-  <!-- ===== Smart picks: valuation + explosion ===== -->
-  <section class="smart" id="smart">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Smart Picks</h2>
-          <p class="muted">Model-driven scores — valuation vs ATH/RSI, and a momentum-based "explosion" score. Educational, not advice.</p>
-        </div>
-      </div>
-      <div class="smart__grid">
-        <div class="card"><h3 class="card__title pos">💎 Most Undervalued</h3><div id="smart-under"></div></div>
-        <div class="card"><h3 class="card__title neg">🎈 Most Overvalued</h3><div id="smart-over"></div></div>
-        <div class="card card--explode"><h3 class="card__title">🚀 Most Likely to Explode</h3><div id="smart-explode"></div></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Picks of the day / week / month ===== -->
-  <section class="picks" id="picks">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Top Picks</h2>
-          <p class="muted">Our highest-conviction setups, refreshed for each horizon.</p>
-        </div>
-        <div class="picks__tabs" id="picks-tabs">
-          <button class="ptab active" data-pick="day">Day</button>
-          <button class="ptab" data-pick="week">Week</button>
-          <button class="ptab" data-pick="month">Month</button>
-        </div>
-      </div>
-      <div class="picks__grid" id="picks-grid"></div>
-    </div>
-  </section>
-
-  <!-- ===== Discover: new / upcoming / airdrops ===== -->
-  <section class="discover" id="discover">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Discover</h2>
-          <p class="muted">Freshly listed coins, upcoming launches and live airdrop opportunities.</p>
-        </div>
-      </div>
-      <div class="discover__grid">
-        <div class="card"><h3 class="card__title">🆕 New Listings</h3><div id="disc-new"></div></div>
-        <div class="card"><h3 class="card__title">📅 Coming Soon</h3><div id="disc-upcoming"></div></div>
-        <div class="card"><h3 class="card__title">🪂 Airdrops</h3><div id="disc-airdrops"></div></div>
-      </div>
-      <p class="muted arb__note">New/upcoming/airdrop listings are curated sample data for demonstration.</p>
-    </div>
-  </section>
-
-  <!-- ===== Chart patterns ===== -->
-  <section class="patterns" id="patterns">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>AI-Detected Chart Patterns</h2>
-          <p class="muted">Our engine scans every timeframe and flags completed &amp; forming patterns automatically.</p>
-        </div>
-      </div>
-      <div class="patterns__grid" id="patterns-grid"></div>
-    </div>
-  </section>
-
-  <!-- ===== Trade setups / signals ===== -->
-  <section class="signals" id="signals">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Expert Trade Setups</h2>
-          <p class="muted">Curated setups with entry, stop-loss and targets — derived live from current market data.</p>
-        </div>
-      </div>
-      <div class="signals__grid" id="signals-grid"></div>
-    </div>
-  </section>
-
-  <!-- ===== AI Copilot ===== -->
-  <section class="copilot" id="copilot">
-    <div class="container copilot__inner">
-      <div class="copilot__copy">
-        <span class="pill">🤖 AI Copilot</span>
-        <h2>Just describe the trade you're looking for.</h2>
-        <p class="muted">Type a strategy in plain English — Copilot translates it into screener filters and surfaces matching coins instantly.</p>
-        <div class="copilot__chips">
-          <button class="chip" data-q="Strong buy coins above $1B market cap">Strong buy · &gt;$1B cap</button>
-          <button class="chip" data-q="Oversold coins with RSI below 35">Oversold · RSI &lt; 35</button>
-          <button class="chip" data-q="Uptrend coins up more than 5% in 24h">Uptrend · +5% 24h</button>
-        </div>
-      </div>
-      <div class="copilot__box">
-        <div class="copilot__log" id="copilot-log">
-          <div class="bubble bubble--bot">Hi 👋 Tell me what kind of setup you want and I'll filter the market for you.</div>
-        </div>
-        <form class="copilot__form" id="copilot-form">
-          <input class="input" id="copilot-input" placeholder="e.g. oversold large caps in an uptrend" autocomplete="off" />
-          <button class="btn btn--primary" type="submit">Ask</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Education / Knowledge base ===== -->
-  <section class="edu" id="learn">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <h2>Articles &amp; Knowledge Base</h2>
-          <p class="muted">Latest research and learn-to-trade guides.</p>
-        </div>
-      </div>
-      <div class="articles__grid" id="articles-grid"></div>
-      <h3 class="edu__subhead">Learn the basics</h3>
-      <div class="edu__grid">
-        <a class="edu__card" href="#patterns">
-          <span class="edu__tag">Patterns</span>
-          <h4>26 Chart Patterns Every Trader Should Know</h4>
-          <p class="muted">Triangles, flags, double tops &amp; bottoms — how to spot them and trade the breakout.</p>
-          <span class="edu__more">Read →</span>
-        </a>
-        <a class="edu__card" href="#screener">
-          <span class="edu__tag">Indicators</span>
-          <h4>RSI, MACD &amp; Moving Averages 101</h4>
-          <p class="muted">Momentum and trend basics — what each indicator tells you and when it lies.</p>
-          <span class="edu__more">Read →</span>
-        </a>
-        <a class="edu__card" href="#arbitrage">
-          <span class="edu__tag">Arbitrage</span>
-          <h4>How Crypto Arbitrage Actually Works</h4>
-          <p class="muted">Exploiting price gaps across exchanges — and the fees that quietly eat your profit.</p>
-          <span class="edu__more">Read →</span>
-        </a>
-        <a class="edu__card" href="#signals">
-          <span class="edu__tag">Risk</span>
-          <h4>Position Sizing &amp; Stop-Losses</h4>
-          <p class="muted">Risk/reward, where to place your stop, and why most setups fail without one.</p>
-          <span class="edu__more">Read →</span>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Pricing ===== -->
-  <section class="pricing" id="pricing">
-    <div class="container">
-      <div class="section-head section-head--center">
-        <h2>Plans for every trader</h2>
-        <p class="muted">Start free. Upgrade when you're ready for deeper analytics.</p>
-      </div>
-      <div class="pricing__grid">
-        <div class="plan">
-          <h3>Starter</h3>
-          <div class="plan__price">$0<span>/mo</span></div>
-          <p class="muted">Get a feel for the platform.</p>
-          <ul>
-            <li>✓ Live market screener</li>
-            <li>✓ Basic indicators &amp; RSI</li>
-            <li>✓ AI Copilot (limited)</li>
-            <li>✓ Watchlist</li>
-          </ul>
-          <a class="btn btn--ghost btn--block" href="#screener">Start free</a>
-        </div>
-        <div class="plan plan--featured">
-          <div class="plan__badge">Most popular</div>
-          <h3>Pro</h3>
-          <div class="plan__price">$29<span>/mo</span></div>
-          <p class="muted">For active traders.</p>
-          <ul>
-            <li>✓ Everything in Starter</li>
-            <li>✓ 150+ indicators &amp; signals</li>
-            <li>✓ AI chart patterns</li>
-            <li>✓ Real-time alerts</li>
-            <li>✓ Trade setups</li>
-          </ul>
-          <a class="btn btn--primary btn--block" href="#screener">Go Pro</a>
-        </div>
-        <div class="plan">
-          <h3>Premium</h3>
-          <div class="plan__price">$79<span>/mo</span></div>
-          <p class="muted">For serious analysts.</p>
-          <ul>
-            <li>✓ Everything in Pro</li>
-            <li>✓ On-chain fundamentals</li>
-            <li>✓ Unlimited Copilot</li>
-            <li>✓ API access</li>
-            <li>✓ Priority support</li>
-          </ul>
-          <a class="btn btn--ghost btn--block" href="#screener">Go Premium</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== Footer ===== -->
-  <footer class="footer">
-    <div class="container footer__inner">
-      <div>
-        <a class="brand" href="#top"><span class="brand__mark">◈</span><span class="brand__name">CoinScope</span></a>
-        <p class="muted">Scan. Analyze. Trade.</p>
-      </div>
-      <div class="footer__cols">
-        <div><h4>Product</h4><a href="#screener">Screener</a><a href="#patterns">Patterns</a><a href="#signals">Setups</a></div>
-        <div><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a></div>
-        <div><h4>Legal</h4><a href="#">Terms</a><a href="#">Privacy</a></div>
-      </div>
-    </div>
-    <div class="container footer__note muted">
-      Demo project for educational purposes — not affiliated with altFINS. Market data via CoinGecko.
-      Nothing here is financial advice.
-    </div>
-  </footer>
-
-  <!-- ===== Coin detail drawer ===== -->
-  <div class="drawer" id="drawer" hidden>
-    <div class="drawer__overlay" id="drawer-overlay"></div>
-    <aside class="drawer__panel" role="dialog" aria-modal="true" aria-labelledby="drawer-name">
-      <button class="drawer__close" id="drawer-close" aria-label="Close">✕</button>
-      <div id="drawer-content"><div class="loading">Loading…</div></div>
-    </aside>
-  </div>
-
-  <!-- ===== Toast container ===== -->
-  <div class="toasts" id="toasts" aria-live="polite"></div>
-
+  <div id="app-foot"></div>
   <script src="assets/data-fallback.js"></script>
   <script src="assets/extras.js"></script>
   <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
   <script src="assets/app.js"></script>
 </body>
 </html>

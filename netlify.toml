@@ -2,7 +2,5 @@
   publish = "web"
   command = ""
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Multi-page static site — Netlify serves each .html directly.
+# Pretty URLs (e.g. /pulse) resolve to the matching .html automatically.

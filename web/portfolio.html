@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portfolio Tracker — CoinScope</title>
+  <meta name="description" content="Track your crypto holdings, total value, 24h change and allocation. Stored privately in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="portfolio">
+  <div id="app-chrome"></div>
+  <section class="portfolio" id="portfolio">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Portfolio Tracker</h2><p class="muted">Add your holdings to see live value, 24h change and allocation. Saved privately in your browser.</p></div>
+      </div>
+
+      <div class="arb__summary" id="pf-summary"></div>
+
+      <form class="pf-form" id="pf-form">
+        <select class="input" id="pf-coin" aria-label="Coin"></select>
+        <input class="input" id="pf-amount" type="number" step="any" placeholder="Amount held" />
+        <button class="btn btn--primary" type="submit">Add holding</button>
+      </form>
+
+      <div class="table-wrap">
+        <table class="grid" id="pf-table">
+          <thead>
+            <tr><th>Coin</th><th class="num">Amount</th><th class="num">Price</th><th class="num">24h</th><th class="num">Value</th><th class="num">Allocation</th><th></th></tr>
+          </thead>
+          <tbody id="pf-body"><tr><td colspan="7" class="loading">Loading…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="arb__note muted">Your portfolio never leaves your device — it's stored in local browser storage only.</p>
+    </div>
+  </section>
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

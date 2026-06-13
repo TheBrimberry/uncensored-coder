@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Screener — CoinScope</title>
+  <meta name="description" content="Filter 1,000+ cryptocurrencies by price, momentum, RSI, signal, pattern and market cap. With an AI Copilot that builds filters from plain English." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="screener">
+  <div id="app-chrome"></div>
+
+  <section class="screener" id="screener">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Live Crypto Screener</h2><p class="muted">Top 1,000 coins with on-the-fly RSI, trend and momentum signals. Click a column to sort, a row for details.</p></div>
+        <div class="screener__status" id="data-status">Loading…</div>
+      </div>
+
+      <div class="toolbar">
+        <input class="input" id="search" type="search" placeholder="Search coin or symbol…" autocomplete="off" />
+        <select class="input" id="signal-filter" aria-label="Filter by signal">
+          <option value="">All signals</option>
+          <option value="Strong Buy">Strong Buy</option>
+          <option value="Buy">Buy</option>
+          <option value="Neutral">Neutral</option>
+          <option value="Sell">Sell</option>
+          <option value="Strong Sell">Strong Sell</option>
+        </select>
+        <select class="input" id="cap-filter" aria-label="Filter by market cap">
+          <option value="0">Any market cap</option>
+          <option value="10000000000">&gt; $10B</option>
+          <option value="1000000000">&gt; $1B</option>
+          <option value="100000000">&gt; $100M</option>
+        </select>
+        <select class="input" id="trend-filter" aria-label="Filter by trend">
+          <option value="">Any trend</option>
+          <option value="up">Uptrend (price &gt; SMA)</option>
+          <option value="down">Downtrend (price &lt; SMA)</option>
+        </select>
+        <button class="btn btn--ghost" id="watch-toggle">★ Watchlist</button>
+        <button class="btn btn--ghost" id="refresh">↻ Refresh</button>
+      </div>
+      <div class="muted" id="screener-count" style="margin-bottom:.6rem;font-size:.82rem"></div>
+
+      <div class="table-wrap">
+        <table class="grid" id="screener-table">
+          <thead>
+            <tr>
+              <th class="star-col"></th>
+              <th data-sort="rank" class="num">#</th>
+              <th data-sort="name">Coin</th>
+              <th data-sort="price" class="num">Price</th>
+              <th data-sort="ch1h" class="num">1h</th>
+              <th data-sort="ch24h" class="num">24h</th>
+              <th data-sort="ch7d" class="num">7d</th>
+              <th data-sort="rsi" class="num">RSI(14)</th>
+              <th data-sort="signal">Signal</th>
+              <th data-sort="pattern">Pattern</th>
+              <th data-sort="mcap" class="num">Market Cap</th>
+              <th>7d chart</th>
+            </tr>
+          </thead>
+          <tbody id="screener-body"><tr><td colspan="12" class="loading">Fetching live market data…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== AI Copilot ===== -->
+  <section class="copilot" id="copilot">
+    <div class="container copilot__inner">
+      <div class="copilot__copy">
+        <span class="pill">🤖 AI Copilot</span>
+        <h2>Just describe the trade you're looking for.</h2>
+        <p class="muted">Type a strategy in plain English — Copilot translates it into screener filters and surfaces matching coins instantly.</p>
+        <div class="copilot__chips">
+          <button class="chip" data-q="Strong buy coins above $1B market cap">Strong buy · &gt;$1B cap</button>
+          <button class="chip" data-q="Oversold coins with RSI below 35">Oversold · RSI &lt; 35</button>
+          <button class="chip" data-q="Uptrend coins up more than 5% in 24h">Uptrend · +5% 24h</button>
+        </div>
+      </div>
+      <div class="copilot__box">
+        <div class="copilot__log" id="copilot-log">
+          <div class="bubble bubble--bot">Hi 👋 Tell me what kind of setup you want and I'll filter the market for you.</div>
+        </div>
+        <form class="copilot__form" id="copilot-form">
+          <input class="input" id="copilot-input" placeholder="e.g. oversold large caps in an uptrend" autocomplete="off" />
+          <button class="btn btn--primary" type="submit">Ask</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>

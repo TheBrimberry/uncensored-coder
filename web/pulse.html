@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Pulse — CoinScope</title>
+  <meta name="description" content="The crypto market at a glance: top gainers, losers, volume leaders, bullish/bearish sentiment and RSI extremes." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="pulse">
+  <div id="app-chrome"></div>
+
+  <section class="pulse" id="pulse">
+    <div class="container">
+      <div class="section-head">
+        <div><h2>Market Pulse</h2><p class="muted">The market at a glance — winners, losers, volume leaders, sentiment and RSI extremes across the top 1,000 coins.</p></div>
+      </div>
+      <div class="pulse__cards" id="pulse-cards"></div>
+      <div class="pulse__grid">
+        <div class="card pulsetable"><h3 class="card__title pos">📈 Most Increased · 24h</h3><div id="pulse-gainers"></div></div>
+        <div class="card pulsetable"><h3 class="card__title neg">📉 Most Decreased · 24h</h3><div id="pulse-losers"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">🔊 Top Volume</h3><div id="pulse-volume"></div></div>
+        <div class="card pulsetable"><h3 class="card__title pos">🟢 Top Bullish</h3><div id="pulse-bullish"></div></div>
+        <div class="card pulsetable"><h3 class="card__title neg">🔴 Top Bearish</h3><div id="pulse-bearish"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">💧 Lowest RSI · oversold</h3><div id="pulse-oversold"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">🔥 Highest RSI · overbought</h3><div id="pulse-overbought"></div></div>
+        <div class="card pulsetable"><h3 class="card__title">⚡ Top Volume / Cap</h3><div id="pulse-volcap"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+  <script src="assets/data-fallback.js"></script>
+  <script src="assets/extras.js"></script>
+  <script src="assets/indicators.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
