@@ -18,8 +18,12 @@
 - **Trades the session open** automatically when you're away (optional).
 - **Answers your questions.** Type in the chat box, click "Ask AI", and it relays
   to the Python AI brain (Ollama) and shows the answer on the chart.
+- **Pauses around news.** Reads the MT5 economic calendar and stops trading in a
+  window around high-impact releases for the symbol's currencies.
+- **Scans a whole watchlist.** Watches a basket of symbols and alerts you to the
+  single best opportunity, even on charts you aren't looking at.
 - **Guardian dashboard.** Live equity, day P/L, drawdown, open risk, trade count,
-  with a daily-loss circuit breaker and total-drawdown kill switch.
+  news status, with a daily-loss circuit breaker and total-drawdown kill switch.
 
 > ⚠️ TEST ON A DEMO ACCOUNT FIRST. Signals are probabilities, not promises.
 
@@ -67,8 +71,17 @@ the AI brain", the Python server isn't running (step 1).
 - **Chart Drawing** — toggle prior-day, support/resistance, pivots, round numbers.
 - **Strategy Advisor** — runs on load and on the "Best Strategy" button.
 - **Session Timing** — auto-trade the open at `InpSessionHour:InpSessionMinute`.
+- **News Filter** — `InpNewsPause` on/off, minutes before/after to pause,
+  `InpNewsHighOnly` to react only to HIGH-impact events. Needs the MT5 economic
+  calendar (works on a live terminal; it's off in the Strategy Tester).
+- **Multi-Symbol Scanner** — `InpWatchSymbols` is your comma-separated basket
+  (use the EXACT symbol names your broker shows, e.g. `EURUSD,XAUUSD,US500`),
+  `InpMultiMinConv` is how strong a basket signal must be to alert you.
 - **Risk Guardian** — risk %, daily-loss %, drawdown kill switch, max positions,
   max trades/day, spread guard.
+
+> Tip: if a watchlist symbol doesn't alert, check the EA's **Experts** log — if it
+> says "symbol not found", copy the exact name from your broker's Market Watch.
 
 ## What stays in Python (not in MT5)
 

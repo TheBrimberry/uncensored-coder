@@ -74,6 +74,17 @@ input int    InpMaxOpenPositions= 2;        // Max simultaneous EA positions
 input int    InpMaxTradesPerDay = 5;        // Cap new trades per day
 input double InpMaxSpreadPoints  = 0;        // Skip if spread above this (0=off)
 
+input group "=== News Filter (economic calendar) ==="
+input bool   InpNewsPause       = true;     // Pause trading around high-impact news
+input int    InpNewsMinsBefore  = 30;       // Minutes before an event to pause
+input int    InpNewsMinsAfter   = 15;       // Minutes after an event to stay paused
+input bool   InpNewsHighOnly    = true;     // Only react to HIGH-impact events
+
+input group "=== Multi-Symbol Scanner (watch a basket) ==="
+input bool   InpMultiScan       = true;     // Scan a watchlist and alert the best move
+input string InpWatchSymbols    = "EURUSD,GBPUSD,USDJPY,XAUUSD,US500"; // comma list
+input double InpMultiMinConv    = 0.50;     // Min conviction to flag a watchlist symbol
+
 input group "=== Dashboard / General ==="
 input bool   InpShowDashboard   = true;     // On-chart risk dashboard
 input long   InpMagic           = 990022;   // Magic number (EA id)
@@ -95,6 +106,14 @@ bool     g_kill         = false;
 string   g_bestStrategy = "(not evaluated)";
 string   g_lastAnswer   = "";
 int      g_lastSignalDir= 0;        // -1/0/+1, to avoid spamming the same signal
+bool     g_newsActive   = false;    // true while inside a news blackout window
+
+// Multi-symbol scanner state
+string   g_watch[];
+int      g_watchCount   = 0;
+int      g_wEmaF[], g_wEmaS[], g_wRsi[], g_wAdx[];
+string   g_lastScanSym  = "";
+int      g_lastScanDir  = 0;
 
 string   UI_INPUT = "omni_input";
 string   UI_ASK   = "omni_ask";
@@ -128,6 +147,7 @@ int OnInit()
    g_dayStartEq = g_peakEquity;
    MqlDateTime dt; TimeToStruct(TimeCurrent(),dt); g_currentDay = dt.day;
 
+   if(InpMultiScan) SetupWatchlist();
    if(InpEnableAI) CreateChatUI();
    if(InpAdvisorOnInit) g_bestStrategy = RunStrategyAdvisor(true);
    if(InpDrawLevels) DrawKeyLevels();
@@ -142,6 +162,11 @@ void OnDeinit(const int reason)
    IndicatorRelease(hEmaF); IndicatorRelease(hEmaS); IndicatorRelease(hEma200);
    IndicatorRelease(hRsi);  IndicatorRelease(hMacd); IndicatorRelease(hBands);
    IndicatorRelease(hAtr);  IndicatorRelease(hAdx);  IndicatorRelease(hStoch);
+   for(int i=0;i<g_watchCount;i++)
+   {
+      IndicatorRelease(g_wEmaF[i]); IndicatorRelease(g_wEmaS[i]);
+      IndicatorRelease(g_wRsi[i]);  IndicatorRelease(g_wAdx[i]);
+   }
    ObjectsDeleteAll(0,"omni_");
    Comment("");
 }
@@ -167,9 +192,12 @@ void OnTick()
    if(bar==g_lastBar) return;     // everything below runs once per new bar
    g_lastBar = bar;
 
-   if(InpDrawLevels)      DrawKeyLevels();
-   if(InpScanPatterns)    ScanPatterns();
+   g_newsActive = (InpNewsPause) ? NewsBlackout() : false;
+
+   if(InpDrawLevels)       DrawKeyLevels();
+   if(InpScanPatterns)     ScanPatterns();
    if(InpProactiveSignals) ProactiveSignalWatch();
+   if(InpMultiScan)        MultiSymbolScan();
    if(InpAutoTradeSession) SessionLogic();
 }
 
@@ -208,7 +236,8 @@ void ProactiveSignalWatch()
    double lot=LotByRisk(slDist,sf<=0?1.0:sf);
 
    string side=(dir>0)?"LONG":"SHORT";
-   string msg=StringFormat(
+   string newsTag=g_newsActive?"[NEWS WINDOW — caution] ":"";
+   string msg=newsTag+StringFormat(
       "SIGNAL %s %s | conv %.0f%% | %s\n"
       "Entry ~%s  SL %s  TP %s  (R:R 1:%.1f)\n"
       "Suggested size %.2f lots @ %.1f%% risk  | RSI %.0f  ADX %.0f",
@@ -427,6 +456,7 @@ void SessionLogic()
 {
    MqlDateTime dt; TimeToStruct(TimeCurrent(),dt);
    if(dt.hour!=InpSessionHour || dt.min<InpSessionMinute || dt.min>InpSessionMinute+5) return;
+   if(g_newsActive){ Print("Session trade skipped — news blackout active."); return; }
    if(!GuardianAllows()) return;
    double bias=EnsembleBias();
    if(MathAbs(bias)<InpSignalThreshold) return;
@@ -444,6 +474,105 @@ void SessionLogic()
    { double sl=NormalizeDouble(bid+slDist,digits),tp=NormalizeDouble(bid-tpDist,digits);
      if(trade.Sell(lot,_Symbol,bid,sl,tp,"OmniAI session short")){ g_tradesToday++;
         Notify("Session SHORT taken on "+_Symbol+" bias "+DoubleToString(bias,2)); } }
+}
+
+//+------------------------------------------------------------------+
+//| NEWS FILTER: true while a high-impact event for this symbol's      |
+//| currencies is inside the [before, after] window around now.        |
+//| Uses the MT5 economic calendar (live terminal only; returns false  |
+//| in the Strategy Tester, which is fine).                            |
+//+------------------------------------------------------------------+
+bool NewsBlackout()
+{
+   datetime now  = TimeCurrent();
+   datetime from = now - InpNewsMinsAfter  * 60;   // events that just happened
+   datetime to   = now + InpNewsMinsBefore * 60;   // events coming up
+
+   string base  = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_BASE);
+   string quote = SymbolInfoString(_Symbol, SYMBOL_CURRENCY_PROFIT);
+
+   MqlCalendarValue values[];
+   int n = CalendarValueHistory(values, from, to, NULL, NULL);
+   for(int i=0; i<n; i++)
+   {
+      MqlCalendarEvent ev;
+      if(!CalendarEventById(values[i].event_id, ev)) continue;
+      if(InpNewsHighOnly && ev.importance != CALENDAR_IMPORTANCE_HIGH) continue;
+
+      MqlCalendarCountry ctry;
+      if(!CalendarCountryById(ev.country_id, ctry)) continue;
+      string cur = ctry.currency;
+      if(cur==base || cur==quote)
+         return(true);
+   }
+   return(false);
+}
+
+//+------------------------------------------------------------------+
+//| MULTI-SYMBOL SCANNER setup: create per-symbol indicator handles   |
+//+------------------------------------------------------------------+
+void SetupWatchlist()
+{
+   string parts[];
+   int k = StringSplit(InpWatchSymbols, ',', parts);
+   if(k<=0) return;
+   ArrayResize(g_watch,k); ArrayResize(g_wEmaF,k); ArrayResize(g_wEmaS,k);
+   ArrayResize(g_wRsi,k);  ArrayResize(g_wAdx,k);
+   g_watchCount=0;
+   for(int i=0;i<k;i++)
+   {
+      string s=parts[i]; StringTrimLeft(s); StringTrimRight(s);
+      if(StringLen(s)<2) continue;
+      if(!SymbolSelect(s,true)) { Print("Watchlist: symbol not found: ",s); continue; }
+      int idx=g_watchCount;
+      g_watch[idx] = s;
+      g_wEmaF[idx] = iMA(s,_Period,20,0,MODE_EMA,PRICE_CLOSE);
+      g_wEmaS[idx] = iMA(s,_Period,50,0,MODE_EMA,PRICE_CLOSE);
+      g_wRsi[idx]  = iRSI(s,_Period,InpPeriods,PRICE_CLOSE);
+      g_wAdx[idx]  = iADX(s,_Period,InpPeriods);
+      if(g_wEmaF[idx]==INVALID_HANDLE || g_wEmaS[idx]==INVALID_HANDLE ||
+         g_wRsi[idx]==INVALID_HANDLE  || g_wAdx[idx]==INVALID_HANDLE) continue;
+      g_watchCount++;
+   }
+   Print("Watchlist active: ",g_watchCount," symbols.");
+}
+
+//+------------------------------------------------------------------+
+//| Compact ensemble bias for a watchlist symbol (by index)           |
+//+------------------------------------------------------------------+
+double WatchBias(const int i)
+{
+   double emaF,emaS,rsi,adx,pdi,ndi,score=0,weight=0;
+   if(RB(g_wEmaF[i],0,0,emaF) && RB(g_wEmaS[i],0,0,emaS) && emaS!=0)
+   { double s=MathMin(MathAbs(emaF-emaS)/emaS*20.0,1.0);
+     if(emaF>emaS) score+=s; else score-=s; weight+=s; }
+   if(RB(g_wRsi[i],0,0,rsi))
+   { if(rsi<30){double s=MathMin((30-rsi)/30.0,1.0);score+=s;weight+=s;}
+     else if(rsi>70){double s=MathMin((rsi-70)/30.0,1.0);score-=s;weight+=s;} }
+   if(RB(g_wAdx[i],0,0,adx) && RB(g_wAdx[i],1,0,pdi) && RB(g_wAdx[i],2,0,ndi))
+   { if(adx>=25){double s=MathMin((adx-25)/25.0,1.0);
+       if(pdi>ndi)score+=s; else score-=s; weight+=s;} }
+   if(weight<=0) return(0);
+   return(score/weight);
+}
+
+//+------------------------------------------------------------------+
+//| Scan the basket and alert on the single best opportunity          |
+//+------------------------------------------------------------------+
+void MultiSymbolScan()
+{
+   int best=-1, bestDir=0; double bestConv=0;
+   for(int i=0;i<g_watchCount;i++)
+   {
+      double b=WatchBias(i); double conv=MathAbs(b);
+      if(conv>bestConv){ bestConv=conv; best=i; bestDir=(b>0?1:-1); }
+   }
+   if(best<0 || bestConv<InpMultiMinConv) return;
+   string sym=g_watch[best];
+   if(sym==g_lastScanSym && bestDir==g_lastScanDir) return;   // debounce
+   g_lastScanSym=sym; g_lastScanDir=bestDir;
+   Notify(StringFormat("WATCHLIST best move: %s %s  (conviction %.0f%%)",
+          (bestDir>0?"LONG":"SHORT"), sym, bestConv*100.0));
 }
 
 //+------------------------------------------------------------------+
@@ -681,6 +810,9 @@ void UpdateDashboard()
    Lbl("5",10,98,"Open (EA): "+(string)CountMyPositions()+
                  "  Trades today: "+(string)g_tradesToday,clrWhite);
    Lbl("6",10,114,"Best strategy: "+g_bestStrategy,clrGold);
+   Lbl("7",10,130,"News: "+(g_newsActive?"BLACKOUT (trades paused)":"clear")+
+                  "   Watchlist: "+(string)g_watchCount,
+                  g_newsActive?clrOrange:clrWhite);
 }
 
 //+------------------------------------------------------------------+
