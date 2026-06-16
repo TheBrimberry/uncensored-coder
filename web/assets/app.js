@@ -192,6 +192,7 @@
     renderCoinPage();
     renderCompare();
     renderUpdates();
+    renderHomeUpdate();
   }
 
   // ---------- screener ----------
@@ -1172,6 +1173,26 @@
     if (events === null) { host.innerHTML = `<div class="upd-empty"><p>Live feed unavailable.</p><p class="muted">The webhook endpoint isn't reachable from here (it runs on Netlify Functions). Deploy the site, then register:</p><code class="upd-url">${esc(url)}</code></div>`; return; }
     if (!events.length) { host.innerHTML = setup; return; }
     host.innerHTML = events.map(updateCard).join('');
+  }
+
+  // Compact "latest coin update" banner for the home page.
+  async function renderHomeUpdate() {
+    const el = $('#home-update'); if (!el) return;
+    let ev = null;
+    try { const r = await fetch(WEBHOOK); if (r.ok) ev = ((await r.json()).events || [])[0]; } catch { /* offline */ }
+    if (!ev) { el.hidden = true; return; }
+    const first = (ev.changes || [])[0] || {};
+    const type = (first.change_type || 'update').toLowerCase();
+    const cls = type === 'addition' ? 'pos' : type === 'removal' ? 'neg' : 'blue';
+    const more = (ev.changes || []).length - 1;
+    el.innerHTML = `<span class="home-update__tag">📡 Coin update</span>
+      <b>${esc(ev.name)}</b> <span class="muted">${esc((ev.symbol || '').toUpperCase())}</span>
+      <span class="upd__type upd__type--${cls}">${esc(type)}</span>
+      <span class="upd__field">${esc(first.field || '')}</span>
+      ${more > 0 ? `<span class="muted">+${more} more</span>` : ''}
+      <time class="muted home-update__time">${relTime(ev.received_at)}</time>
+      <span class="home-update__cta">View all →</span>`;
+    el.hidden = false;
   }
 
   // ---------- AI Copilot ----------

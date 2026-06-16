@@ -530,3 +530,11 @@ img.coin-ico { object-fit: cover; }
 .hy-disclaimer { font-size: .8rem; margin-top: 1.6rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 @media (max-width: 880px) { .hy-cards { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .hy-cards { grid-template-columns: 1fr; } }
+
+/* ===== Home: latest coin update banner ===== */
+.home-update { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; margin: 0 0 .5rem; padding: .7rem 1rem; background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 12px; font-size: .9rem; transition: .15s; }
+.home-update:hover { border-color: var(--accent); transform: translateY(-1px); }
+.home-update__tag { font-weight: 700; color: var(--accent); }
+.home-update__time { margin-left: auto; }
+.home-update__cta { color: var(--accent); font-weight: 600; }
+@media (max-width: 600px) { .home-update__time { margin-left: 0; } }
