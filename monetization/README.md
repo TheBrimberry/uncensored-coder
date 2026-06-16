@@ -74,6 +74,38 @@ python -m monetization.cli estimate 50000 12.5   # using your own RPM
 
 ---
 
+## 💸 Affiliate income (second stream, same install)
+
+Turn on the affiliate module and it bundles into the **same `ad-loader.js`** —
+no second script tag, no extra placements. On every page it:
+
+- adds **your** affiliate tag to any outbound Amazon/eBay/AliExpress link you
+  already wrote (existing links start paying instantly),
+- auto-links chosen keywords to your affiliate URLs,
+- drops the FTC-required disclosure when affiliate links are present,
+- marks every affiliate link `rel="sponsored nofollow"` (Google requirement).
+
+Enable in `ad_config.yaml`:
+
+```yaml
+affiliate:
+  enabled: true
+  merchants:
+    amazon:
+      enabled: true
+      value: "yourtag-20"        # your Amazon Associates ID
+  keyword_links:
+    - keyword: "best laptop"
+      url: "https://www.amazon.com/s?k=best+laptop&tag=yourtag-20"
+      max: 1
+```
+
+Then just `build` again — same single `<script>` now earns from ads **and**
+affiliates. This is the highest income-per-effort upgrade: same traffic, same
+pages, second revenue stream.
+
+---
+
 ## 👀 Preview locally
 
 ```bash

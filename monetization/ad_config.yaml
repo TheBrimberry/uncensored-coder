@@ -69,6 +69,44 @@ placements:
   sticky_footer: { enabled: true,  selector: "body",            position: "beforeend" }
 
 # ---------------------------------------------------------------------------
+# AFFILIATE — second income stream, same pages, same single script tag.
+# Auto-tags outbound merchant links with YOUR affiliate ID and auto-links
+# keywords. Stacks on top of the ads for max income / least effort.
+# ---------------------------------------------------------------------------
+affiliate:
+  enabled: false
+  disclosure: true                  # FTC-required; shown once when affiliate links exist
+  disclosure_text: "As an Amazon Associate we earn from qualifying purchases."
+  content_selector: "article, main, .content, .post"
+
+  # Any link on your site pointing to these merchants gets your tag added.
+  merchants:
+    amazon:
+      enabled: true
+      match: ["amazon.com", "amzn.to"]
+      param: "tag"
+      value: "yourtag-20"           # your Amazon Associates tracking ID
+    ebay:
+      enabled: false
+      match: ["ebay.com", "ebay.to"]
+      param: "campid"
+      value: "0000000000"           # your eBay Partner Network campaign ID
+    aliexpress:
+      enabled: false
+      match: ["aliexpress.com"]
+      param: "aff_fcid"
+      value: "XXXXXXXX"
+
+  # Auto-link these phrases to affiliate URLs (first `max` occurrences per page).
+  keyword_links:
+    - keyword: "best laptop"
+      url: "https://www.amazon.com/s?k=best+laptop&tag=yourtag-20"
+      max: 1
+    # - keyword: "noise cancelling headphones"
+    #   url: "https://www.amazon.com/s?k=noise+cancelling+headphones&tag=yourtag-20"
+    #   max: 1
+
+# ---------------------------------------------------------------------------
 # OPTIMIZATION — knobs that move revenue.
 # ---------------------------------------------------------------------------
 optimization:

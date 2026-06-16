@@ -42,6 +42,8 @@ def cmd_build(_args):
     else:
         _print("   ⚠️  No networks enabled yet — edit monetization/ad_config.yaml "
                "and set a network's `enabled: true`.")
+    if res.get("affiliate"):
+        _print("   💸 affiliate module: ON (bundled into ad-loader.js — same script tag)")
     _print("\nNext: copy the loader to your web root, then run "
            "`python -m monetization.cli inject ./your-site`")
 

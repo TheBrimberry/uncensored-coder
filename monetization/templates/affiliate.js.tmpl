@@ -1,0 +1,110 @@
+/*
+ * 💸 Affiliate auto-injector — stacks affiliate income on top of your ads,
+ * on the same pages, with zero extra placement work.
+ *
+ * On every page it automatically:
+ *   1. tags outbound links to supported merchants with YOUR affiliate ID
+ *      (so any existing Amazon/eBay/etc. link you already wrote starts paying)
+ *   2. auto-links chosen keywords to your affiliate product/search URLs
+ *   3. drops the FTC-required affiliate disclosure once per page
+ *   4. marks every affiliate link rel="sponsored nofollow" (Google requirement)
+ *
+ * Bundled into ad-loader.js by the builder — no second script tag needed.
+ */
+(function () {
+  "use strict";
+
+  var AFF = __AFFILIATE_CONFIG__;
+  if (!AFF || !AFF.enabled) return;
+  if (window.__affLoaderStarted) return;
+  window.__affLoaderStarted = true;
+
+  function hostOf(href) {
+    try { return new URL(href, location.href).hostname.replace(/^www\./, ""); }
+    catch (e) { return ""; }
+  }
+
+  function merchantFor(host) {
+    var ms = AFF.merchants || [];
+    for (var i = 0; i < ms.length; i++) {
+      if (!ms[i].enabled) continue;
+      var matches = ms[i].match || [];
+      for (var j = 0; j < matches.length; j++) {
+        if (host === matches[j] || host.endsWith("." + matches[j]) || host === matches[j].replace(/^www\./, "")) {
+          return ms[i];
+        }
+      }
+    }
+    return null;
+  }
+
+  // 1) Tag existing outbound links to merchants with your affiliate param.
+  function tagLinks() {
+    var links = document.querySelectorAll("a[href]");
+    for (var i = 0; i < links.length; i++) {
+      var a = links[i];
+      if (a.getAttribute("data-aff")) continue;
+      var m = merchantFor(hostOf(a.href));
+      if (!m) continue;
+      try {
+        var u = new URL(a.href, location.href);
+        u.searchParams.set(m.param, m.value);   // add or overwrite tag
+        a.href = u.toString();
+      } catch (e) { continue; }
+      a.setAttribute("rel", "sponsored nofollow noopener");
+      a.setAttribute("data-aff", "1");
+    }
+  }
+
+  // 2) Auto-link keywords to affiliate URLs (first N occurrences, content only).
+  function keywordLinks() {
+    var rules = AFF.keyword_links || [];
+    if (!rules.length) return;
+    var scope = document.querySelector(AFF.content_selector || "article, main, .content, .post") || document.body;
+
+    rules.forEach(function (rule) {
+      var remaining = rule.max || 1;
+      var rx = new RegExp("\\b(" + rule.keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")\\b", "i");
+      var walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, null);
+      var nodes = [], n;
+      while ((n = walker.nextNode())) nodes.push(n);
+
+      for (var i = 0; i < nodes.length && remaining > 0; i++) {
+        var node = nodes[i];
+        if (!node.parentNode || node.parentNode.closest("a, script, style, h1, h2")) continue;
+        var match = node.nodeValue.match(rx);
+        if (!match) continue;
+
+        var idx = match.index;
+        var after = node.splitText(idx);
+        after.nodeValue = after.nodeValue.substring(match[1].length);
+        var link = document.createElement("a");
+        link.href = rule.url;
+        link.textContent = match[1];
+        link.setAttribute("rel", "sponsored nofollow noopener");
+        link.setAttribute("data-aff", "1");
+        if (rule.new_tab !== false) link.target = "_blank";
+        node.parentNode.insertBefore(link, after);
+        remaining--;
+      }
+    });
+  }
+
+  // 3) FTC affiliate disclosure (legally required, one per page).
+  function disclosure() {
+    if (!AFF.disclosure) return;
+    if (document.getElementById("aff-disclosure")) return;
+    if (!document.querySelector("a[data-aff]")) return;   // nothing to disclose
+    var scope = document.querySelector(AFF.content_selector || "article, main, .content, .post") || document.body;
+    var d = document.createElement("p");
+    d.id = "aff-disclosure";
+    d.textContent = AFF.disclosure_text ||
+      "As an affiliate we may earn from qualifying purchases made through links on this page.";
+    d.style.cssText = "font:12px/1.5 system-ui,sans-serif;color:#888;font-style:italic;margin:8px 0;padding:6px 0;border-bottom:1px solid #eee";
+    scope.insertBefore(d, scope.firstChild);
+  }
+
+  function run() { tagLinks(); keywordLinks(); disclosure(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run);
+  else run();
+})();

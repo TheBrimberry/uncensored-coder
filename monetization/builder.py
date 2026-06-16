@@ -31,6 +31,7 @@ class AdBuilder:
         self.base = base
         self.config_path = config_path or os.path.join(base, "ad_config.yaml")
         self.tmpl_path = os.path.join(base, "templates", "ad_loader.js.tmpl")
+        self.aff_tmpl_path = os.path.join(base, "templates", "affiliate.js.tmpl")
         with open(self.config_path, "r", encoding="utf-8") as f:
             self.config = yaml.safe_load(f)
 
@@ -74,15 +75,34 @@ class AdBuilder:
                 if isinstance(c, dict) and c.get("enabled")]
 
     # -- build steps ----------------------------------------------------------
+    def _affiliate_module(self):
+        """Return the affiliate JS (config injected), or '' if disabled."""
+        aff = self.config.get("affiliate", {})
+        if not aff.get("enabled"):
+            return ""
+        with open(self.aff_tmpl_path, "r", encoding="utf-8") as f:
+            tmpl = f.read()
+        return tmpl.replace("__AFFILIATE_CONFIG__", json.dumps(aff, indent=2))
+
     def build_loader(self):
         with open(self.tmpl_path, "r", encoding="utf-8") as f:
             tmpl = f.read()
         cfg_json = json.dumps(self._client_config(), indent=2)
         loader = tmpl.replace("__AD_CONFIG__", cfg_json)
+
+        # Bundle the affiliate income module into the SAME file, so one script
+        # tag drives both ads and affiliate revenue.
+        aff = self._affiliate_module()
+        if aff:
+            loader += "\n\n/* ===== bundled affiliate module ===== */\n" + aff
+
         out = os.path.join(self._output_dir(), "ad-loader.js")
         with open(out, "w", encoding="utf-8") as f:
             f.write(loader)
         return out
+
+    def affiliate_enabled(self):
+        return bool(self.config.get("affiliate", {}).get("enabled"))
 
     def build_ads_txt(self):
         if not self.config.get("compliance", {}).get("generate_ads_txt", True):
@@ -120,5 +140,6 @@ class AdBuilder:
             "snippet": self.build_snippet_file(),
             "ads_txt": self.build_ads_txt(),
             "networks": self.enabled_networks(),
+            "affiliate": self.affiliate_enabled(),
         }
         return result
