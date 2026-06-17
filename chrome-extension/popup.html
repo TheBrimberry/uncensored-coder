@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <span class="logo">📈</span>
+    <div>
+      <div class="title">Omniscient Trading Agent</div>
+      <div class="sub">probabilities, not promises</div>
+    </div>
+    <button id="gear" class="gear" title="Settings">⚙</button>
+  </header>
+
+  <div id="settings" class="settings hidden">
+    <label>Agent server URL</label>
+    <input id="serverUrl" value="http://127.0.0.1:8765">
+    <div class="row2">
+      <div><label>Equity ($)</label><input id="equity" value="10000"></div>
+      <div><label>Risk (%)</label><input id="risk" value="1"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="watchEnabled"> Background signal watch (desktop alerts)</label>
+    <div class="row2">
+      <div><label>Watch symbol</label><input id="watchSymbol" value="BTC/USDT"></div>
+      <div><label>Every (min)</label><input id="watchMins" value="15"></div>
+    </div>
+    <button id="saveSettings" class="save">Save settings</button>
+  </div>
+
+  <div class="controls">
+    <input id="symbol" class="symbol" value="BTC/USDT" placeholder="BTC/USDT, AAPL, EURUSD">
+    <select id="timeframe">
+      <option>1d</option><option>1w</option><option>4h</option>
+      <option>1h</option><option>15m</option><option>5m</option>
+    </select>
+  </div>
+
+  <input id="question" class="question" placeholder="Question for 'Ask AI' / 'Knowledge' (optional)">
+
+  <div class="buttons">
+    <button data-act="analyze"  class="b-green">Analyze</button>
+    <button data-act="ask"      class="b-blue">Ask AI 🤖</button>
+    <button data-act="regime">Regime</button>
+    <button data-act="mtf">Multi-TF</button>
+    <button data-act="insights">Co-Pilot</button>
+    <button data-act="plan">Trade Plan</button>
+    <button data-act="backtest">Backtest</button>
+    <button data-act="knowledge" class="b-ghost">Knowledge</button>
+  </div>
+
+  <pre id="out" class="out">Type a symbol and click a button.
+
+Needs the Python agent running:
+double-click "Start Trading Agent.bat"
+(or run: python serve.py)
+
+Then this popup talks to it locally.</pre>
+
+  <div id="status" class="status">●  checking agent…</div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
