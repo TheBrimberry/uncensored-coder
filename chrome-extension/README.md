@@ -1,61 +1,59 @@
-# Omniscient Trading Agent — Chrome Extension
+# Omniscient Trading Agent — Chrome Extension (v2)
 
-A browser-toolbar front-end for the trading agent. Click the toolbar icon to get
-a popup with Analyze, Ask AI, Regime, Multi-Timeframe, Co-Pilot, Trade Plan,
-Backtest and Knowledge search — plus optional **background desktop alerts** that
-watch a symbol for you while you browse.
-
-## How it works
-
-The extension is the **face**; the Python agent is the **brain**. The popup sends
-your requests to the local agent server (`serve.py`) running on your own PC, so
-your analysis stays on your machine. Ollama (optional) powers the "Ask AI" button.
+A full trading co-pilot in your browser. The extension is the face; your local
+Python agent (`serve.py`) is the brain. Everything runs on your own machine.
 
 ```
-Chrome extension  ──HTTP──►  python serve.py (127.0.0.1:8765)  ──►  TradingAgent
+popup / side panel / background  ──HTTP──►  serve.py (127.0.0.1:8765)  ──►  TradingAgent (+ Ollama)
 ```
 
-## Setup (one time)
+## Features
+
+**Signals tab** — live cards for every watchlist symbol with direction,
+conviction, **entry / SL / TP / RR**, suggested size, regime and the top reason.
+
+**Analyze tab** — one-click ★ Signal, Ask AI, Analyze, Regime, Multi-Timeframe,
+Co-Pilot, Trade Plan, Backtest, Knowledge search for any symbol.
+
+**Watchlist tab** — manage your basket of symbols and set **price alerts**
+(above/below) that fire desktop notifications.
+
+**Journal tab** — every auto-signal is logged locally; review history and
+**export to CSV**.
+
+**Settings** — server URL, equity, risk, background-watch interval, minimum
+conviction, sound, and a light/dark **theme** toggle.
+
+**Background watcher** — scans your watchlist on a schedule and pushes **full
+signal notifications** (entry/SL/TP/RR + reason) with **Analyze / Snooze 1h**
+buttons. A toolbar **badge** shows how many live setups exist right now.
+
+**Live side panel** — a persistent, auto-refreshing signal board. Open it with
+**Ctrl+Shift+T** (or from a notification's Analyze button).
+
+**Right-click anywhere** — select a ticker on any web page, right-click →
+*Analyze "…" with Trading Agent* for an instant signal notification.
+
+## Setup
 
 ### 1. Start the agent server
-From your TradingAgent folder, either:
-- double-click **Start Trading Agent.bat**, or
-- run `python serve.py`
+From your TradingAgent folder: double-click **Start Trading Agent.bat**
+(or run `python serve.py`). Leave it running. For "Ask AI", also run **Ollama**.
 
-Leave it running. (For "Ask AI" answers, also have **Ollama** running.)
+### 2. Load the extension
+1. Chrome → `chrome://extensions`
+2. Turn on **Developer mode** (top-right)
+3. **Load unpacked** → pick this `chrome-extension` folder
+4. Pin the 📈 icon.
 
-### 2. Load the extension in Chrome
-1. Open Chrome and go to:  `chrome://extensions`
-2. Turn on **Developer mode** (top-right toggle).
-3. Click **Load unpacked**.
-4. Select this `chrome-extension` folder.
-5. The 📈 icon appears in your toolbar. Pin it if you like.
-
-### 3. Use it
-- Click the toolbar icon, type a symbol, click a button.
-- The status line at the bottom shows "agent connected" when it can reach the
-  server. If it says "agent offline", start `serve.py` (step 1).
-
-## Background signal watch (optional)
-
-In the popup, click the ⚙ gear:
-- tick **Background signal watch**
-- set the symbol and interval
-- **Save settings**
-
-Chrome will then check that symbol on a schedule and pop a desktop notification
-when the market is in an actionable regime (strong trend / high volatility) —
-even when the popup is closed. The browser must be running for alerts to fire.
-
-## Settings
-
-- **Agent server URL** — default `http://127.0.0.1:8765`. Change only if you run
-  the server on another port/host.
-- **Equity / Risk** — used for position sizing in Trade Plan and signals.
+### 3. Turn on the watcher (optional)
+Popup → ⚙ Settings → tick **Background watch** → set interval & min conviction →
+**Save**. Add symbols in the **Watchlist** tab.
 
 ## Notes / honesty
 
-- This is a convenience front-end. It needs the Python agent running locally; the
-  extension does not trade by itself and places no orders.
-- Signals are probabilities, not guarantees. Use for research; trade your own plan.
-- Nothing is uploaded to any third party — requests go only to your local agent.
+- Needs `serve.py` running; the extension places no orders and does not trade.
+- Signals are probabilities, not guarantees. Research tool — trade your own plan.
+- All requests go only to your local agent; nothing is sent to third parties.
+- Publishing to the Chrome Web Store is a separate, reviewed process — this is the
+  standard "Load unpacked" developer install.

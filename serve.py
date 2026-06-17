@@ -41,6 +41,83 @@ def get_agent(equity=10_000.0, risk=1.0):
         return _agent
 
 
+def build_signal(symbol, timeframe, equity, risk):
+    """Compute a full structured trade signal (entry/SL/TP + context) in one
+    market-data fetch. Returns a JSON-serializable dict for the extension."""
+    from trading.strategies import run_all, ensemble
+    from trading.patterns import analyze_patterns
+    from trading.regime import detect_regime
+    from trading.forecast import Forecaster
+    from trading.risk import build_trade_plan, position_size
+    from trading import indicators as ind
+
+    agent = get_agent(equity, risk)
+    symbol = (symbol or "").strip()
+    sig = {"symbol": symbol, "timeframe": timeframe, "ok": False}
+    if not symbol:
+        sig["error"] = "no symbol"
+        return sig
+    try:
+        data = agent.engine.md.get_ohlcv(symbol, timeframe)
+        bars = data.as_bars()
+        price = float(data.close[-1])
+        net = ensemble(run_all(bars))
+        direction = net.direction.value          # long | short | flat
+        conviction = round(float(net.strength), 3)
+        ins = analyze_patterns(symbol, bars)
+        reg = detect_regime(symbol, bars)
+        fc = Forecaster().forecast(symbol, bars, horizon=5)
+        atr = ind.last(ind.atr(bars["high"], bars["low"], bars["close"], 14)) or 0.0
+
+        reasons = []
+        reasons += ins.highlights[:2]
+        reasons += [p.name for p in ins.patterns[:2]]
+        if reg.notes:
+            reasons.append(reg.notes[0])
+
+        has_trade = direction in ("long", "short") and atr > 0
+        entry = stop = take_profit = rr = size = None
+        if has_trade:
+            plan = build_trade_plan(symbol, direction, entry=price,
+                                    atr_value=atr, rr=2.0)
+            entry = round(plan.entry, 6)
+            stop = round(plan.stop, 6)
+            take_profit = round(plan.take_profit, 6)
+            rr = round(getattr(plan, "risk_reward", 2.0), 2)
+            sf = reg.size_factor if reg.size_factor > 0 else 1.0
+            size = round(position_size(equity, risk, plan.entry, plan.stop) * sf, 6)
+
+        sig.update({
+            "ok": True,
+            "price": round(price, 6),
+            "direction": direction,
+            "has_trade": has_trade,
+            "conviction": conviction,
+            "entry": entry, "stop": stop, "take_profit": take_profit,
+            "rr": rr, "size": size,
+            "regime": reg.regime.value,
+            "size_factor": reg.size_factor,
+            "atr_pct": reg.atr_pct,
+            "prob_up": round(float(fc.prob_up), 3),
+            "confidence": round(float(fc.confidence), 3),
+            "reasons": reasons,
+            "rationale": net.rationale,
+        })
+    except Exception as e:  # noqa: BLE001
+        sig["error"] = str(e)
+    return sig
+
+
+def quick_price(symbol, timeframe):
+    """Cheap last-price lookup for price alerts."""
+    agent = get_agent()
+    try:
+        data = agent.engine.md.get_ohlcv((symbol or "").strip(), timeframe or "1d")
+        return {"symbol": symbol, "price": round(float(data.close[-1]), 6), "ok": True}
+    except Exception as e:  # noqa: BLE001
+        return {"symbol": symbol, "ok": False, "error": str(e)}
+
+
 def run_action(action, symbol, timeframe, question, strategy, equity, risk):
     """Dispatch a UI action to the agent and return plain text."""
     agent = get_agent(equity, risk)
@@ -245,6 +322,24 @@ class Handler(BaseHTTPRequestHandler):
                 risk=risk,
             )
             self._send(200, json.dumps({"text": text}),
+                       ctype="application/json; charset=utf-8")
+            return
+        if parsed.path == "/api/signal":
+            q = parse_qs(parsed.query)
+            g = lambda k, d="": (q.get(k, [d])[0])
+            try:
+                equity = float(g("equity", "10000") or 10000)
+                risk = float(g("risk", "1") or 1)
+            except ValueError:
+                equity, risk = 10000.0, 1.0
+            sig = build_signal(g("symbol"), g("timeframe", "1d"), equity, risk)
+            self._send(200, json.dumps(sig),
+                       ctype="application/json; charset=utf-8")
+            return
+        if parsed.path == "/api/price":
+            q = parse_qs(parsed.query)
+            g = lambda k, d="": (q.get(k, [d])[0])
+            self._send(200, json.dumps(quick_price(g("symbol"), g("timeframe", "1d"))),
                        ctype="application/json; charset=utf-8")
             return
         self._send(404, "Not found")

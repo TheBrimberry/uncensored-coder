@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Omniscient Trading Agent",
-  "version": "1.0.0",
-  "description": "Multi-asset trading co-pilot: analyze, regime, multi-timeframe, signals, backtest and AI chat — in your browser toolbar.",
-  "permissions": ["storage", "notifications", "alarms"],
+  "version": "2.0.0",
+  "description": "Your AI trading co-pilot in the browser: live signals with entry/SL/TP, watchlist scanner, price alerts, journal, side panel and desktop notifications.",
+  "permissions": ["storage", "notifications", "alarms", "contextMenus", "sidePanel"],
   "host_permissions": [
     "http://127.0.0.1:8765/*",
     "http://localhost:8765/*"
@@ -24,5 +24,14 @@
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "commands": {
+    "open-side-panel": {
+      "suggested_key": { "default": "Ctrl+Shift+T" },
+      "description": "Open the live signals side panel"
+    }
   }
 }
