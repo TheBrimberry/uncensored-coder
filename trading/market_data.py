@@ -125,10 +125,15 @@ class MarketData:
         # FX is checked first: 'EUR/USD' contains a slash and would otherwise be
         # misread as crypto. Yahoo serves FX under the 'EURUSD=X' ticker.
         if _looks_like_fx(symbol):
-            data = self._try_yfinance(_fx_to_yahoo(symbol), timeframe, limit)
-            if data:
-                data.symbol = symbol
-                return data
+            for provider in (
+                lambda: self._try_alpaca(symbol, timeframe, limit, asset="fx"),
+                lambda: self._try_yfinance(_fx_to_yahoo(symbol), timeframe, limit),
+                lambda: self._try_stooq(symbol, timeframe, limit, asset="fx"),
+            ):
+                data = provider()
+                if data:
+                    data.symbol = symbol
+                    return data
         elif _looks_like_crypto(symbol):
             # Prefer a real exchange; if blocked/unavailable, fall back to
             # Yahoo's crypto feed (BTC/USDT -> BTC-USD) before going synthetic.
@@ -140,9 +145,17 @@ class MarketData:
                 data.symbol = symbol
                 return data
         else:
-            data = self._try_yfinance(symbol, timeframe, limit)
-            if data:
-                return data
+            for provider in (
+                lambda: self._try_polygon(symbol, timeframe, limit),
+                lambda: self._try_alpaca(symbol, timeframe, limit, asset="stock"),
+                lambda: self._try_finnhub(symbol, timeframe, limit),
+                lambda: self._try_yfinance(symbol, timeframe, limit),
+                lambda: self._try_stooq(symbol, timeframe, limit, asset="stock"),
+            ):
+                data = provider()
+                if data:
+                    data.symbol = symbol
+                    return data
         if self.strict:
             raise MarketDataError(
                 f"No REAL market data available for '{symbol}' ({timeframe}). "
@@ -188,5 +201,133 @@ class MarketData:
             col = lambda name: [float(x) for x in df[name].values.flatten()]
             return OHLCV(symbol, timeframe, col("Open"), col("High"), col("Low"),
                          col("Close"), col("Volume"), source="yfinance")
+        except Exception:
+            return None
+
+    def _try_stooq(self, symbol: str, timeframe: str, limit: int,
+                   asset: str = "stock") -> Optional[OHLCV]:
+        """Keyless real daily data from Stooq (a reliable Yahoo backup).
+
+        Only daily bars are served over the free CSV endpoint, so this is used
+        as a resilience fallback for 1d requests on stocks/FX/indices."""
+        if timeframe not in ("1d", "1day", "d", "1w"):
+            return None
+        try:
+            import urllib.request
+            s = symbol.upper().replace("/", "")
+            if asset == "fx":
+                code = s.lower()                       # eurusd
+            else:
+                code = symbol.lower()
+                if "." not in code:                    # default US listing
+                    code = code + ".us"
+            url = f"https://stooq.com/q/d/l/?s={code}&i=d"
+            req = urllib.request.Request(url, headers={"User-Agent": "OmniAgent/1.0"})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                text = r.read().decode("utf-8", errors="ignore")
+            lines = [ln for ln in text.strip().splitlines() if ln]
+            if len(lines) < 2 or not lines[0].lower().startswith("date"):
+                return None
+            o, h, l, c, v = [], [], [], [], []
+            for ln in lines[1:]:
+                parts = ln.split(",")
+                if len(parts) < 5:
+                    continue
+                try:
+                    o.append(float(parts[1])); h.append(float(parts[2]))
+                    l.append(float(parts[3])); c.append(float(parts[4]))
+                    v.append(float(parts[5]) if len(parts) > 5 and parts[5] else 0.0)
+                except ValueError:
+                    continue
+            if len(c) < 2:
+                return None
+            sl = slice(-limit, None)
+            return OHLCV(symbol, timeframe, o[sl], h[sl], l[sl], c[sl], v[sl],
+                         source="stooq")
+        except Exception:
+            return None
+
+    def _try_alpaca(self, symbol: str, timeframe: str, limit: int,
+                    asset: str = "stock") -> Optional[OHLCV]:
+        """Real-time-grade bars from Alpaca, used automatically if API keys are
+        set in env (APCA_API_KEY_ID / APCA_API_SECRET_KEY). No key -> skipped."""
+        key = os.environ.get("APCA_API_KEY_ID")
+        sec = os.environ.get("APCA_API_SECRET_KEY")
+        if not key or not sec:
+            return None
+        try:
+            import json as _json
+            import urllib.request
+            tf = {"1d": "1Day", "1h": "1Hour", "15m": "15Min", "5m": "5Min"}.get(timeframe, "1Day")
+            if asset == "fx":
+                return None  # FX via other providers; Alpaca FX is separate API
+            base = "https://data.alpaca.markets/v2/stocks"
+            url = f"{base}/{symbol.upper()}/bars?timeframe={tf}&limit={min(limit,10000)}"
+            req = urllib.request.Request(url, headers={
+                "APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": sec})
+            with urllib.request.urlopen(req, timeout=12) as r:
+                data = _json.loads(r.read().decode("utf-8"))
+            bars = data.get("bars") or []
+            if not bars:
+                return None
+            o = [b["o"] for b in bars]; h = [b["h"] for b in bars]
+            l = [b["l"] for b in bars]; c = [b["c"] for b in bars]
+            v = [b.get("v", 0) for b in bars]
+            return OHLCV(symbol, timeframe, o, h, l, c, v, source="alpaca")
+        except Exception:
+            return None
+
+    def _try_polygon(self, symbol: str, timeframe: str, limit: int) -> Optional[OHLCV]:
+        """Polygon.io aggregates, used automatically if POLYGON_API_KEY is set."""
+        key = os.environ.get("POLYGON_API_KEY")
+        if not key:
+            return None
+        try:
+            import json as _json
+            import urllib.request
+            from datetime import datetime, timedelta
+            mult, span = {"1d": (1, "day"), "1h": (1, "hour"),
+                          "15m": (15, "minute"), "5m": (5, "minute")}.get(timeframe, (1, "day"))
+            end = datetime.utcnow().date()
+            start = end - timedelta(days=900 if span == "day" else 30)
+            url = (f"https://api.polygon.io/v2/aggs/ticker/{symbol.upper()}/range/"
+                   f"{mult}/{span}/{start}/{end}?adjusted=true&sort=asc&limit=50000&apiKey={key}")
+            with urllib.request.urlopen(url, timeout=12) as r:
+                data = _json.loads(r.read().decode("utf-8"))
+            res = data.get("results") or []
+            if not res:
+                return None
+            res = res[-limit:]
+            o = [b["o"] for b in res]; h = [b["h"] for b in res]
+            l = [b["l"] for b in res]; c = [b["c"] for b in res]
+            v = [b.get("v", 0) for b in res]
+            return OHLCV(symbol, timeframe, o, h, l, c, v, source="polygon")
+        except Exception:
+            return None
+
+    def _try_finnhub(self, symbol: str, timeframe: str, limit: int) -> Optional[OHLCV]:
+        """Finnhub candles, used automatically if FINNHUB_API_KEY is set."""
+        key = os.environ.get("FINNHUB_API_KEY")
+        if not key:
+            return None
+        try:
+            import json as _json
+            import urllib.request
+            from datetime import datetime, timedelta
+            res = {"1d": "D", "1h": "60", "15m": "15", "5m": "5"}.get(timeframe, "D")
+            now = int(datetime.utcnow().timestamp())
+            span_days = 900 if res == "D" else 30
+            frm = int((datetime.utcnow() - timedelta(days=span_days)).timestamp())
+            url = (f"https://finnhub.io/api/v1/stock/candle?symbol={symbol.upper()}"
+                   f"&resolution={res}&from={frm}&to={now}&token={key}")
+            with urllib.request.urlopen(url, timeout=12) as r:
+                data = _json.loads(r.read().decode("utf-8"))
+            if data.get("s") != "ok":
+                return None
+            o, h, l, c = data["o"], data["h"], data["l"], data["c"]
+            v = data.get("v", [0] * len(c))
+            sl = slice(-limit, None)
+            return OHLCV(symbol, timeframe, o[sl], h[sl], l[sl], c[sl], v[sl],
+                         source="finnhub")
         except Exception:
             return None
