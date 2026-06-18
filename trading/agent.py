@@ -39,8 +39,11 @@ class TradingAgent:
     def __init__(self, model: Optional[str] = None,
                  account_equity: float = 10_000.0, risk_pct: float = 1.0,
                  risk_limits: Optional[RiskLimits] = None,
-                 corpus_path: Optional[str] = None):
+                 corpus_path: Optional[str] = None,
+                 real_data_only: bool = False):
         self.engine = AnalysisEngine()
+        if real_data_only:
+            self.engine.md.strict = True
         self.kb = KnowledgeBase()
         self.corpus = KnowledgeCorpus()
         if corpus_path:

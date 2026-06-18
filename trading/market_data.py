@@ -13,8 +13,13 @@ strategies, agent) is always testable offline — clearly flagged as synthetic.
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+
+class MarketDataError(RuntimeError):
+    """Raised in strict 'real data only' mode when no real provider returns data."""
 
 
 @dataclass
@@ -98,10 +103,22 @@ def _synthetic_series(symbol: str, limit: int, seed_price: float = 100.0) -> OHL
 
 
 class MarketData:
-    """Facade over optional data providers with synthetic fallback."""
+    """Facade over optional data providers.
 
-    def __init__(self, crypto_exchange: str = "binance"):
+    `strict=True` ('real data only') means: if no real provider returns data we
+    raise MarketDataError instead of fabricating a synthetic series. This is the
+    right mode for live decisions. Strict can also be turned on globally with the
+    env var OMNI_REAL_DATA_ONLY=1. Default is non-strict so the offline test
+    suite and demos still work.
+    """
+
+    def __init__(self, crypto_exchange: str = "binance",
+                 strict: Optional[bool] = None):
         self.crypto_exchange = crypto_exchange
+        if strict is None:
+            strict = os.environ.get("OMNI_REAL_DATA_ONLY", "").lower() in (
+                "1", "true", "yes", "on")
+        self.strict = strict
 
     def get_ohlcv(self, symbol: str, timeframe: str = "1d",
                   limit: int = 300) -> OHLCV:
@@ -126,6 +143,13 @@ class MarketData:
             data = self._try_yfinance(symbol, timeframe, limit)
             if data:
                 return data
+        if self.strict:
+            raise MarketDataError(
+                f"No REAL market data available for '{symbol}' ({timeframe}). "
+                "Real-data-only mode is on, so synthetic data is refused. "
+                "Check: (1) internet connection, (2) the symbol uses your "
+                "provider's exact format (BTC/USDT, AAPL, EURUSD), and "
+                "(3) yfinance/ccxt are installed.")
         return _synthetic_series(symbol, limit)
 
     # -- providers ---------------------------------------------------------

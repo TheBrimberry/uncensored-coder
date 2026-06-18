@@ -41,7 +41,8 @@ def _banner():
 
 def run_once(args):
     agent = TradingAgent(model=args.model, account_equity=args.equity,
-                         risk_pct=args.risk)
+                         risk_pct=args.risk,
+                         real_data_only=not args.allow_synthetic)
     if args.backtest:
         result = agent.backtest(args.symbol, strategy=args.backtest,
                                 timeframe=args.timeframe)
@@ -76,7 +77,8 @@ def run_once(args):
 
 def run_interactive(args):
     agent = TradingAgent(model=args.model, account_equity=args.equity,
-                         risk_pct=args.risk)
+                         risk_pct=args.risk,
+                         real_data_only=not args.allow_synthetic)
     out("Interactive mode. Type a symbol (e.g. BTC/USDT, AAPL, EURUSD), "
         "'kb <asset>' for knowledge, or 'exit'.", style="cyan")
     while True:
@@ -144,6 +146,9 @@ def main():
                    help="Comma-separated paths to BotConfig JSON files to sweep on a schedule")
     p.add_argument("--monitor-interval", type=float, default=60.0,
                    help="Interval in minutes between monitor-bots sweeps (default: 60)")
+    p.add_argument("--allow-synthetic", action="store_true",
+                   help="Permit synthetic data when no real feed is available "
+                        "(default: real data only — error out if no real data)")
     args = p.parse_args()
 
     _banner()

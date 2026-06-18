@@ -45,11 +45,18 @@ CHAT_SYSTEM = (
 )
 
 
+# Real-data-only by default. Set OMNI_ALLOW_SYNTHETIC=1 to permit the synthetic
+# fallback (useful only for offline UI testing).
+REAL_DATA_ONLY = os.environ.get("OMNI_ALLOW_SYNTHETIC", "").lower() not in (
+    "1", "true", "yes", "on")
+
+
 def get_agent(equity=10_000.0, risk=1.0):
     global _agent
     with _agent_lock:
         if _agent is None:
-            _agent = TradingAgent(account_equity=equity, risk_pct=risk)
+            _agent = TradingAgent(account_equity=equity, risk_pct=risk,
+                                  real_data_only=REAL_DATA_ONLY)
         return _agent
 
 
