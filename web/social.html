@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Trends — CoinScope</title>
+  <meta name="description" content="Monitor crypto social trends in real time — what's trending in search, the hottest narratives, and live discussion from crypto communities." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="social">
+  <div id="app-chrome"></div>
+
+  <section class="social" id="social">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Social Trends Monitor</h2>
+          <p class="muted">What the crypto crowd is searching, talking about and hyping right now — updated live.</p>
+        </div>
+        <span class="screener__status" id="soc-status">Loading…</span>
+      </div>
+
+      <div class="soc-grid">
+        <!-- Trending searches -->
+        <div class="card soc-card">
+          <h3 class="card__title">🔎 Trending searches <span class="muted">· last 24h</span></h3>
+          <ol class="soc-trend" id="soc-trending"><li class="muted">Loading…</li></ol>
+        </div>
+
+        <!-- Trending narratives / categories -->
+        <div class="card soc-card">
+          <h3 class="card__title">🧵 Hot narratives</h3>
+          <div class="soc-cats" id="soc-cats"><span class="muted">Loading…</span></div>
+          <p class="muted soc-note">Sectors gaining the most attention by market-cap momentum.</p>
+        </div>
+      </div>
+
+      <!-- Social feed -->
+      <div class="section-head soc-feed-head">
+        <div><h3 class="hy-h3" style="margin:0">💬 Community feed</h3></div>
+        <div class="toolbar" style="margin:0">
+          <select class="input" id="soc-sub">
+            <option value="CryptoCurrency">r/CryptoCurrency</option>
+            <option value="CryptoMarkets">r/CryptoMarkets</option>
+            <option value="Bitcoin">r/Bitcoin</option>
+            <option value="ethereum">r/ethereum</option>
+            <option value="solana">r/solana</option>
+            <option value="defi">r/defi</option>
+            <option value="altcoin">r/altcoin</option>
+          </select>
+          <select class="input" id="soc-sort">
+            <option value="hot">Hot</option>
+            <option value="top">Top today</option>
+            <option value="rising">Rising</option>
+            <option value="new">New</option>
+          </select>
+        </div>
+      </div>
+      <div class="soc-feed" id="soc-feed"><div class="loading">Loading discussion…</div></div>
+
+      <p class="hy-disclaimer muted">
+        Trending search &amp; narrative data from CoinGecko; community posts from public Reddit feeds.
+        Social buzz reflects attention, not investment merit — always do your own research.
+      </p>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+  <script src="assets/extras.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/social.js"></script>
+</body>
+</html>

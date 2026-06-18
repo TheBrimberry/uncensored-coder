@@ -12,6 +12,8 @@
     ['smart.html', 'Smart Picks'],
     ['picks.html', 'Top Picks'],
     ['discover.html', 'Discover'],
+    ['social.html', 'Social'],
+    ['markets.html', 'Markets'],
     ['updates.html', 'Updates'],
     ['news.html', 'News'],
     ['portfolio.html', 'Portfolio'],

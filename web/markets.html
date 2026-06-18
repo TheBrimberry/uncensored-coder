@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forex, Metals, Commodities &amp; Indexes — CoinScope</title>
+  <meta name="description" content="Live quotes for major forex pairs, precious metals, commodities and global stock indexes — alongside your crypto analytics." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body data-page="markets">
+  <div id="app-chrome"></div>
+
+  <section class="markets" id="markets">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <h2>Global Markets</h2>
+          <p class="muted">Forex, precious metals, commodities and stock indexes — live quotes beyond crypto.</p>
+        </div>
+        <span class="screener__status" id="mkt-status">Loading…</span>
+      </div>
+
+      <div class="mkt-tabs" id="mkt-tabs">
+        <button class="tf active" data-group="forex">💱 Forex</button>
+        <button class="tf" data-group="metals">🥇 Metals</button>
+        <button class="tf" data-group="commodities">🛢️ Commodities</button>
+        <button class="tf" data-group="indexes">📈 Indexes</button>
+      </div>
+
+      <div class="mkt-cards" id="mkt-cards"></div>
+
+      <p class="hy-disclaimer muted">
+        Quotes are delayed and provided for information only — not a trading feed or investment advice.
+        Markets are closed on weekends/holidays, so values may reflect the last session.
+      </p>
+    </div>
+  </section>
+
+  <div id="app-foot"></div>
+  <script src="assets/extras.js"></script>
+  <script src="assets/layout.js"></script>
+  <script src="assets/markets.js"></script>
+</body>
+</html>
