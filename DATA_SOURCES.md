@@ -39,3 +39,29 @@ Close and reopen the terminal (and restart `serve.py`) so it picks up the key.
 - FX: `EURUSD` or `EUR/USD`
 - Crypto: `BTC/USDT`, `ETH/USDT` (or `BTC-USD`)
 - Indices/ETF: `SPY`, `QQQ`, `^GSPC`
+
+
+## Using YOUR TradeLocker account as the data source
+
+When TradeLocker credentials are set, the agent reads prices straight from your
+own broker feed FIRST (before any public source), for every asset class.
+
+1. Install the SDK:
+   ```
+   pip install tradelocker
+   ```
+2. Set your credentials (Windows PowerShell, persists for your user):
+   ```
+   setx TRADELOCKER_USERNAME "you@email.com"
+   setx TRADELOCKER_PASSWORD "your_password"
+   setx TRADELOCKER_SERVER   "YOUR-SERVER"
+   setx TRADELOCKER_ENV      "https://demo.tradelocker.com"
+   ```
+   Use `https://live.tradelocker.com` for a live account. The SERVER value is the
+   one shown on your TradeLocker login screen.
+3. Close/reopen the terminal and restart `serve.py`. Symbols now resolve through
+   TradeLocker (use the exact instrument names your TradeLocker shows, e.g.
+   `EURUSD`, `BTCUSD`, `XAUUSD`).
+
+If the SDK or credentials are missing, the agent silently falls back to the free
+real sources (Yahoo / ccxt / Stooq).

@@ -122,6 +122,13 @@ class MarketData:
 
     def get_ohlcv(self, symbol: str, timeframe: str = "1d",
                   limit: int = 300) -> OHLCV:
+        # YOUR broker first: if TradeLocker credentials are set, use your own
+        # account's live feed for every asset class before any public source.
+        data = self._try_tradelocker(symbol, timeframe, limit)
+        if data:
+            data.symbol = symbol
+            return data
+
         # FX is checked first: 'EUR/USD' contains a slash and would otherwise be
         # misread as crypto. Yahoo serves FX under the 'EURUSD=X' ticker.
         if _looks_like_fx(symbol):
@@ -329,5 +336,68 @@ class MarketData:
             sl = slice(-limit, None)
             return OHLCV(symbol, timeframe, o[sl], h[sl], l[sl], c[sl], v[sl],
                          source="finnhub")
+        except Exception:
+            return None
+
+    # -- TradeLocker (your own broker account) -----------------------------
+    def _tradelocker_api(self):
+        """Lazily authenticate the TradeLocker SDK once and cache it.
+
+        Reads credentials from env:
+          TRADELOCKER_USERNAME (or _EMAIL), TRADELOCKER_PASSWORD,
+          TRADELOCKER_SERVER, TRADELOCKER_ENV (default demo URL).
+        Returns None (skipped) if the SDK or credentials are missing."""
+        cached = getattr(self, "_tl_api", "unset")
+        if cached != "unset":
+            return cached
+        self._tl_api = None
+        user = os.environ.get("TRADELOCKER_USERNAME") or os.environ.get("TRADELOCKER_EMAIL")
+        pw = os.environ.get("TRADELOCKER_PASSWORD")
+        server = os.environ.get("TRADELOCKER_SERVER")
+        env = os.environ.get("TRADELOCKER_ENV", "https://demo.tradelocker.com")
+        if not (user and pw and server):
+            return None
+        try:
+            from tradelocker import TLAPI  # type: ignore
+            self._tl_api = TLAPI(environment=env, username=user,
+                                 password=pw, server=server)
+        except Exception:
+            self._tl_api = None
+        return self._tl_api
+
+    def _try_tradelocker(self, symbol: str, timeframe: str,
+                         limit: int) -> Optional[OHLCV]:
+        tl = self._tradelocker_api()
+        if tl is None:
+            return None
+        try:
+            import time as _time
+            res = {"1d": "1D", "1w": "1W", "4h": "4H", "1h": "1H",
+                   "30m": "30m", "15m": "15m", "5m": "5m", "1m": "1m"}.get(timeframe, "1D")
+            # TradeLocker uses its own instrument names; try a couple of forms.
+            candidates = [symbol, symbol.upper().replace("/", ""), symbol.upper()]
+            iid = None
+            for cand in candidates:
+                try:
+                    iid = tl.get_instrument_id_from_symbol_name(cand)
+                except Exception:
+                    iid = None
+                if iid:
+                    break
+            if not iid:
+                return None
+            end_ms = int(_time.time() * 1000)
+            span_days = 900 if res in ("1D", "1W") else 45
+            start_ms = end_ms - span_days * 86400 * 1000
+            df = tl.get_price_history(iid, resolution=res,
+                                      start_timestamp=start_ms, end_timestamp=end_ms)
+            if df is None or len(df) == 0:
+                return None
+            getf = lambda k: [float(x) for x in (df[k].values if hasattr(df[k], "values") else df[k])]
+            o, h, l, c = getf("o"), getf("h"), getf("l"), getf("c")
+            v = getf("v") if "v" in getattr(df, "columns", []) else [0.0] * len(c)
+            sl = slice(-limit, None)
+            return OHLCV(symbol, timeframe, o[sl], h[sl], l[sl], c[sl], v[sl],
+                         source="tradelocker")
         except Exception:
             return None
