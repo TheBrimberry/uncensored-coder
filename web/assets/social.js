@@ -81,13 +81,14 @@
 
   // ---- Reddit community feed ----
   function postCard(p) {
+    const src = p.source === 'hn' ? 'Hacker News' : `r/${esc(p.sub)}`;
     return `<a class="soc-post" href="${esc(p.permalink)}" target="_blank" rel="noopener">
       <div class="soc-post__main">
         ${p.flair ? `<span class="soc-flair">${esc(p.flair)}</span>` : ''}
         <span class="soc-post__title">${esc(p.title)}</span>
       </div>
       <div class="soc-post__meta muted">
-        <span>r/${esc(p.sub)}</span><span>▲ ${num(p.ups)}</span><span>💬 ${num(p.comments)}</span><span>${ago(p.created)} ago</span>
+        <span>${src}</span><span>▲ ${num(p.ups)}</span><span>💬 ${num(p.comments)}</span><span>${ago(p.created)} ago</span>
       </div>
     </a>`;
   }
