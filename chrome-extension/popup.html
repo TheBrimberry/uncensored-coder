@@ -16,8 +16,9 @@
 
   <nav class="tabs">
     <button class="tab active" data-tab="signals">Signals</button>
+    <button class="tab" data-tab="chat">Chat</button>
     <button class="tab" data-tab="analyze">Analyze</button>
-    <button class="tab" data-tab="watch">Watchlist</button>
+    <button class="tab" data-tab="watch">Watch</button>
     <button class="tab" data-tab="journal">Journal</button>
     <button class="tab" data-tab="settings">⚙</button>
   </nav>
@@ -29,6 +30,22 @@
       <button id="refreshSignals" class="mini">↻ Scan now</button>
     </div>
     <div id="signalCards" class="cards">Loading…</div>
+  </section>
+
+  <!-- CHAT -->
+  <section id="tab-chat" class="panel">
+    <div class="rowbar">
+      <span class="muted">Chat with your trading co-pilot (needs Ollama)</span>
+      <button id="chatReset" class="mini">Reset</button>
+    </div>
+    <div class="chatctx">
+      <input id="chatSymbol" placeholder="optional symbol for context (e.g. BTC/USDT)">
+    </div>
+    <div id="chatLog" class="chatlog"></div>
+    <div class="chatbar">
+      <input id="chatInput" class="chatinput" placeholder="Ask anything… e.g. is gold a buy here?">
+      <button id="chatSend" class="b-blue">Send</button>
+    </div>
   </section>
 
   <!-- ANALYZE -->

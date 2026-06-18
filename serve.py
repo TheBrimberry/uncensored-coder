@@ -32,6 +32,18 @@ PORT = 8765
 _agent_lock = threading.Lock()
 _agent = None
 
+# Conversational chatbot memory (multi-turn).
+_chat_lock = threading.Lock()
+_chat_history = []   # list of {"role": "user"|"assistant", "content": str}
+
+CHAT_SYSTEM = (
+    "You are a sharp, honest trading co-pilot. You discuss markets, strategies, "
+    "risk and any symbol the user mentions. Be concise and practical. Use the "
+    "RELEVANT TRADING KNOWLEDGE and any MARKET SNAPSHOT provided to ground your "
+    "answer. Never promise profits — speak in probabilities and always respect "
+    "risk management. If you are unsure, say so."
+)
+
 
 def get_agent(equity=10_000.0, risk=1.0):
     global _agent
@@ -116,6 +128,77 @@ def quick_price(symbol, timeframe):
         return {"symbol": symbol, "price": round(float(data.close[-1]), 6), "ok": True}
     except Exception as e:  # noqa: BLE001
         return {"symbol": symbol, "ok": False, "error": str(e)}
+
+
+def chat(message, symbol="", timeframe="1d"):
+    """Conversational chatbot with memory, grounded in the corpus + live market
+    snapshot, answered by the local LLM (Ollama). Degrades to a knowledge-base
+    answer when Ollama isn't running."""
+    from trading.prompts import TRADING_SYSTEM_PROMPT  # noqa: F401
+
+    agent = get_agent()
+    message = (message or "").strip()
+    if not message:
+        return {"reply": "Ask me anything — a symbol, a strategy, risk, or markets."}
+
+    # Reset command
+    if message.lower() in ("/reset", "/clear", "reset chat"):
+        with _chat_lock:
+            _chat_history.clear()
+        return {"reply": "Conversation cleared. Fresh start — what's on your mind?"}
+
+    symbol = (symbol or "").strip()
+    grounding = agent.corpus.as_prompt_context(message + " " + symbol, k=4) or ""
+
+    market = ""
+    if symbol:
+        try:
+            sig = build_signal(symbol, timeframe, agent.account_equity, agent.risk_pct)
+            if sig.get("ok"):
+                if sig.get("has_trade"):
+                    market = (f"MARKET SNAPSHOT — {symbol} ({timeframe}): "
+                              f"{sig['direction']} bias, price {sig['price']}, "
+                              f"conviction {sig['conviction']}, regime {sig['regime']}, "
+                              f"entry {sig['entry']} SL {sig['stop']} TP {sig['take_profit']} "
+                              f"(RR 1:{sig['rr']}). prob_up {sig['prob_up']}.")
+                else:
+                    market = (f"MARKET SNAPSHOT — {symbol} ({timeframe}): flat / no setup. "
+                              f"price {sig['price']}, regime {sig['regime']}, "
+                              f"prob_up {sig['prob_up']}.")
+        except Exception:  # noqa: BLE001
+            pass
+
+    with _chat_lock:
+        history = list(_chat_history[-8:])
+
+    loader = agent._get_loader()
+    if not loader:
+        reply = ("[LLM offline — start Ollama for full chat. Here's the most "
+                 "relevant knowledge I have:]\n\n" +
+                 (grounding or "No matching knowledge yet. Ingest notes or start Ollama."))
+        if market:
+            reply = market + "\n\n" + reply
+    else:
+        convo = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in history)
+        parts = []
+        if grounding: parts.append(grounding)
+        if market:    parts.append(market)
+        if convo:     parts.append("CONVERSATION SO FAR:\n" + convo)
+        parts.append("USER: " + message)
+        parts.append("ASSISTANT:")
+        prompt = "\n\n".join(parts)
+        try:
+            reply = loader.generate(prompt, system_prompt=CHAT_SYSTEM)
+        except Exception as e:  # noqa: BLE001
+            reply = f"[LLM error: {e}]\n\n" + (grounding or "")
+
+    with _chat_lock:
+        _chat_history.append({"role": "user", "content": message})
+        _chat_history.append({"role": "assistant", "content": reply})
+        if len(_chat_history) > 40:
+            del _chat_history[:len(_chat_history) - 40]
+
+    return {"reply": reply}
 
 
 def run_action(action, symbol, timeframe, question, strategy, equity, risk):
@@ -340,6 +423,12 @@ class Handler(BaseHTTPRequestHandler):
             q = parse_qs(parsed.query)
             g = lambda k, d="": (q.get(k, [d])[0])
             self._send(200, json.dumps(quick_price(g("symbol"), g("timeframe", "1d"))),
+                       ctype="application/json; charset=utf-8")
+            return
+        if parsed.path == "/api/chat":
+            q = parse_qs(parsed.query)
+            g = lambda k, d="": (q.get(k, [d])[0])
+            self._send(200, json.dumps(chat(g("message"), g("symbol"), g("timeframe", "1d"))),
                        ctype="application/json; charset=utf-8")
             return
         self._send(404, "Not found")

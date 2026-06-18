@@ -87,3 +87,18 @@ h4{margin:8px 0 4px; font-size:12px;}
 .status{padding:6px 12px 10px; color:var(--muted); font-size:11px;
         border-top:1px solid var(--border);}
 .status.ok{color:var(--green);} .status.bad{color:var(--red);}
+
+/* chat */
+.chatctx{margin-bottom:6px;}
+.chatctx input{width:100%;}
+.chatlog{display:flex; flex-direction:column; gap:6px; height:260px; overflow:auto;
+  padding:8px; background:var(--panel); border:1px solid var(--border); border-radius:8px;}
+.msg{padding:7px 9px; border-radius:8px; font-size:12.5px; line-height:1.45; max-width:88%;
+  white-space:pre-wrap;}
+.msg.user{align-self:flex-end; background:var(--blue); color:#fff;}
+.msg.bot{align-self:flex-start; background:var(--bg); border:1px solid var(--border);}
+.msg.bot.think{color:var(--muted); font-style:italic;}
+.chatbar{display:flex; gap:6px; margin-top:8px;}
+.chatinput{flex:1;}
+.chatbar button{padding:8px 14px; border:none; border-radius:6px; cursor:pointer;
+  font-weight:700;}

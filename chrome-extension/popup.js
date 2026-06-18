@@ -13,6 +13,7 @@ function initTabs() {
       if (t.dataset.tab === "signals") loadSignals();
       if (t.dataset.tab === "watch") renderWatch();
       if (t.dataset.tab === "journal") renderJournal();
+      if (t.dataset.tab === "chat") $("chatInput").focus();
     });
   });
 }
@@ -160,6 +161,36 @@ async function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
+// ---------- chat ----------
+function addMsg(cls, text) {
+  const log = $("chatLog");
+  const el = document.createElement("div");
+  el.className = "msg " + cls;
+  el.textContent = text;
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+async function sendChat() {
+  const input = $("chatInput");
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = "";
+  addMsg("user", msg);
+  const thinking = addMsg("bot think", "thinking…");
+  try {
+    const reply = await apiChat(msg, $("chatSymbol").value.trim(), "1d");
+    thinking.remove();
+    addMsg("bot", reply);
+    setStatus("agent connected", "ok");
+  } catch (e) {
+    thinking.remove();
+    addMsg("bot", "Agent offline — start serve.py (and Ollama for full chat).");
+    setStatus("agent offline — start serve.py", "bad");
+  }
+}
+
 // ---------- settings ----------
 async function loadSettings() {
   const cfg = await omniConfig();
@@ -220,6 +251,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     c.priceAlerts.push({ symbol: sym, dir: $("alDir").value, price, active: true });
     await omniSet({ priceAlerts: c.priceAlerts });
     $("alSymbol").value = ""; $("alPrice").value = ""; renderWatch();
+  });
+  $("chatSend").addEventListener("click", sendChat);
+  $("chatInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
+  $("chatReset").addEventListener("click", async () => {
+    $("chatLog").innerHTML = "";
+    try { await apiChat("/reset", "", "1d"); addMsg("bot", "Conversation cleared."); }
+    catch (e) {}
   });
   $("saveSettings").addEventListener("click", saveSettings);
   $("exportCsv").addEventListener("click", exportCsv);

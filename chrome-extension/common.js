@@ -58,6 +58,16 @@ async function apiPrice(symbol, timeframe, cfg) {
   return r.json();
 }
 
+async function apiChat(message, symbol, timeframe, cfg) {
+  cfg = cfg || (await omniConfig());
+  const p = new URLSearchParams({
+    message, symbol: symbol || "", timeframe: timeframe || "1d",
+  });
+  const r = await fetch(cfg.serverUrl + "/api/chat?" + p.toString());
+  const d = await r.json();
+  return d.reply || "(no reply)";
+}
+
 // Format a signal object into a compact human string.
 function fmtSignal(s) {
   if (!s || !s.ok) return (s && s.error) ? ("error: " + s.error) : "no data";
