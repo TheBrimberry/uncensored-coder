@@ -39,8 +39,13 @@ async function fromReddit(sub, sort, limit) {
 
 async function fromHN(sub, sort, limit) {
   const q = HN_QUERY[sub] || 'cryptocurrency';
-  const path = (sort === 'new' || sort === 'rising') ? 'search_by_date' : 'search';
-  const r = await fetch(`https://hn.algolia.com/api/v1/${path}?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=${limit}`);
+  const byDate = (sort === 'new' || sort === 'rising');
+  const path = byDate ? 'search_by_date' : 'search';
+  // Keep results recent so the feed reflects current discussion, not all-time hits.
+  const now = Math.floor(Date.now() / 1000);
+  const since = sort === 'top' ? now - 30 * 86400 : now - 7 * 86400;
+  const filter = byDate ? '' : `&numericFilters=created_at_i>${since}`;
+  const r = await fetch(`https://hn.algolia.com/api/v1/${path}?query=${encodeURIComponent(q)}&tags=story&hitsPerPage=${limit}${filter}`);
   if (!r.ok) throw new Error(`hn ${r.status}`);
   const j = await r.json();
   return (j.hits || [])
