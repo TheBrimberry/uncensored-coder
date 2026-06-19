@@ -191,6 +191,63 @@ async function sendChat() {
   }
 }
 
+// ---------- start server (native messaging) ----------
+const NATIVE_HOST = "com.omni.trading.launcher";
+
+function setPill(state, text) {
+  const p = $("srvPill");
+  if (!p) return;
+  p.textContent = text;
+  p.className = "pill" + (state === "on" ? " on" : state === "off" ? " off" : "");
+}
+
+async function serverUp() {
+  try {
+    const cfg = await omniConfig();
+    const r = await fetch(cfg.serverUrl + "/api/price?symbol=BTC/USDT");
+    return r.ok;
+  } catch (e) { return false; }
+}
+
+async function pollUntilUp(seconds) {
+  for (let i = 0; i < seconds; i++) {
+    if (await serverUp()) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
+}
+
+async function startServer() {
+  if (await serverUp()) { setPill("on", "running"); setStatus("agent connected", "ok"); return; }
+  setPill("", "starting…");
+  setStatus("starting server…", "");
+  try {
+    chrome.runtime.sendNativeMessage(NATIVE_HOST, { action: "start" }, async (resp) => {
+      if (chrome.runtime.lastError || !resp) {
+        // Helper not installed — fall back to clear instructions.
+        setPill("off", "not running");
+        setStatus("helper not installed — run install_server_button.bat once", "bad");
+        $("startHint").innerHTML =
+          "One-click start needs the helper. From your agent folder, double-click " +
+          "<b>install_server_button.bat</b> once, then reload this extension. " +
+          "Or just double-click <b>Start Trading Agent.bat</b> to start it now.";
+        return;
+      }
+      const ok = await pollUntilUp(20);
+      setPill(ok ? "on" : "off", ok ? "running" : "no response");
+      setStatus(ok ? "agent connected" : "server didn't respond", ok ? "ok" : "bad");
+      if (ok) { loadSignals(); }
+    });
+  } catch (e) {
+    setPill("off", "error");
+    setStatus("could not start: " + e.message, "bad");
+  }
+}
+
+async function refreshPill() {
+  setPill(await serverUp() ? "on" : "off", await serverUp() ? "running" : "not running");
+}
+
 // ---------- settings ----------
 async function loadSettings() {
   const cfg = await omniConfig();
@@ -259,6 +316,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     try { await apiChat("/reset", "", "1d"); addMsg("bot", "Conversation cleared."); }
     catch (e) {}
   });
+  $("startServer").addEventListener("click", startServer);
+  refreshPill();
   $("saveSettings").addEventListener("click", saveSettings);
   $("exportCsv").addEventListener("click", exportCsv);
   $("clearJournal").addEventListener("click", async () => {

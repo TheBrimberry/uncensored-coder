@@ -105,6 +105,16 @@
 
   <!-- SETTINGS -->
   <section id="tab-settings" class="panel">
+    <div class="serverbox">
+      <div class="rowbar">
+        <span class="muted">Agent server</span>
+        <span id="srvPill" class="pill">checking…</span>
+      </div>
+      <button id="startServer" class="save" style="background:var(--green);margin-top:6px">▶ Start server</button>
+      <div class="tip" id="startHint">One-click start needs the helper installed once
+        (run <b>install_server_button.bat</b> from your agent folder). Without it,
+        just double-click <b>Start Trading Agent.bat</b>.</div>
+    </div>
     <label>Agent server URL</label>
     <input id="serverUrl" value="http://127.0.0.1:8765">
     <div class="row2">

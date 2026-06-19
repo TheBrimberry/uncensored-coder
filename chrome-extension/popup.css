@@ -88,6 +88,12 @@ h4{margin:8px 0 4px; font-size:12px;}
         border-top:1px solid var(--border);}
 .status.ok{color:var(--green);} .status.bad{color:var(--red);}
 
+.serverbox{border:1px solid var(--border); border-radius:8px; padding:10px;
+  margin-bottom:12px; background:var(--panel);}
+.pill{font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700;
+  background:#30363d; color:#fff;}
+.pill.on{background:var(--green);} .pill.off{background:var(--red);}
+
 /* chat */
 .chatctx{margin-bottom:6px;}
 .chatctx input{width:100%;}

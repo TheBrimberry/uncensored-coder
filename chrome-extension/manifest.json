@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Omniscient Trading Agent",
-  "version": "2.0.0",
-  "description": "Your AI trading co-pilot in the browser: live signals with entry/SL/TP, watchlist scanner, price alerts, journal, side panel and desktop notifications.",
-  "permissions": ["storage", "notifications", "alarms", "contextMenus", "sidePanel"],
+  "version": "2.1.0",
+  "description": "Your AI trading co-pilot in the browser: live signals with entry/SL/TP, watchlist scanner, price alerts, journal, side panel, chat and one-click server start.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2fZ3qPnSeLysoFxAYhbF9pl9N5ztswsDtivAdompHPF2MV28CUhvg/E2AqY9WdhMpRvEDXGgScpew5v3X+nDCwrMbrHYsPljnNdt3/C+tu+3p0aS0DYl46Nxx3rCY0n0l15tGrKxKChVfKjoP36Hq3tttCMfgn/KP58Ydiyg0jN7Oae+0Mijw5mwVXcL+Rt0HTJ6D4qaGCPzYK20IaZK6IVDfx/Z3eHZszXasgyOSu3BXgtL/OT8pJQa5fKHnYt3+OXFCL6LKE3GKal2bqH+wBI9VEgW6OhP0nD9Pceyu64UU7c7Zm3wL3PV4H7LzlzqTJbaCWOtATFu//hXFkqLgQIDAQAB",
+  "permissions": ["storage", "notifications", "alarms", "contextMenus", "sidePanel", "nativeMessaging"],
   "host_permissions": [
     "http://127.0.0.1:8765/*",
     "http://localhost:8765/*"
