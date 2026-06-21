@@ -15,7 +15,7 @@
   <section class="predictions" id="predictions">
     <div class="container">
       <div class="section-head">
-        <div><h2>Price Predictions</h2><p class="muted">Model-based forecasts from 5 days to 1 year. Sorted by upside for the selected horizon. Educational only — not financial advice.</p></div>
+        <div><h2>Price Predictions</h2><p class="muted">Model estimates from 5 days to 1 year, shown with a likely range. Sorted by market cap. Educational only — not financial advice.</p></div>
         <div class="picks__tabs" id="pred-tabs">
           <button class="ptab" data-pred="5d">5-Day</button>
           <button class="ptab active" data-pred="1m">1-Month</button>
@@ -31,7 +31,7 @@
           <tbody id="pred-body"><tr><td colspan="8" class="loading">Computing forecasts…</td></tr></tbody>
         </table>
       </div>
-      <p class="arb__note muted">Forecasts use a dampened trend-and-momentum model over each coin's recent price action. Markets are volatile and unpredictable — treat these as illustrative, not guarantees.</p>
+      <p class="arb__note muted">Each estimate blends decaying momentum with RSI mean-reversion, compounded and anchored to a neutral long-run baseline. The likely range (low–high) comes from each coin's own volatility and widens with time; confidence falls as the range widens. No model can predict crypto prices — treat these as illustrative scenarios, never guarantees or financial advice.</p>
     </div>
   </section>
   <div id="app-foot"></div>

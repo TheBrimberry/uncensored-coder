@@ -574,3 +574,9 @@ img.coin-ico { object-fit: cover; }
 .mkt-card__sub { font-size: .75rem; }
 .mkt-card__price { font-size: 1.5rem; font-weight: 800; margin: .5rem 0 .2rem; letter-spacing: -.02em; }
 .mkt-card__chg { font-size: .9rem; font-weight: 600; }
+
+/* ===== Predictions: range + confidence ===== */
+.pred-range { display: block; font-size: .72rem; margin-top: .15rem; white-space: nowrap; }
+.pred-cards .arb__stat .pred-range { font-size: .72rem; }
+.pred-disclaim { font-size: .8rem; margin: .6rem 0 0; }
+td.pred-active { background: rgba(45,212,191,.06); }

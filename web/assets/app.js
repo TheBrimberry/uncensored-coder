@@ -869,14 +869,47 @@
     }).join('');
   }
 
-  // ---------- Price predictions (CoinCodex-style) ----------
+  // ---------- Price predictions ----------
   const PRED_HORIZONS = [['5d', '5-Day', 5], ['1m', '1-Month', 30], ['3m', '3-Month', 90], ['1y', '1-Year', 365]];
-  function forecast(c, days) {
-    const mu = Math.max(-0.02, Math.min(0.02, (c.ch7d / 100) / 7)); // daily drift, capped ±2%
-    const damp = days <= 5 ? 1 : days <= 30 ? 0.6 : days <= 90 ? 0.38 : 0.15;
-    const skew = (c.score / 10) * (days / 365) * 0.3;
-    return Math.max(c.price * (1 + mu * days * damp + skew), c.price * 0.05);
+
+  // Daily log-volatility estimated from the 7d sparkline (hourly), with fallback.
+  function dailyVol(c) {
+    const p = c.prices;
+    if (p && p.length > 3) {
+      let s = 0, s2 = 0, n = 0;
+      for (let i = 1; i < p.length; i++) {
+        if (p[i - 1] > 0) { const r = Math.log(p[i] / p[i - 1]); s += r; s2 += r * r; n++; }
+      }
+      if (n > 2) {
+        const mean = s / n, varr = Math.max(0, s2 / n - mean * mean);
+        return Math.min(0.25, Math.max(0.01, Math.sqrt(varr) * Math.sqrt(24))); // hourly → daily
+      }
+    }
+    return Math.min(0.25, Math.max(0.02, Math.abs(c.ch7d || 5) / 100 / Math.sqrt(7) * 1.2));
   }
+  function confLabel(sig) { return sig < 0.25 ? 'High' : sig < 0.5 ? 'Medium' : sig < 0.9 ? 'Low' : 'Very low'; }
+
+  // Principled forecast: decaying momentum + RSI mean-reversion, compounded and
+  // anchored to a neutral long-run baseline, with a volatility-based range.
+  function predict(c, days) {
+    const P = c.price;
+    const muM = Math.log(1 + (c.ch7d || 0) / 100) / 7;        // recent daily momentum (log)
+    const lambda = Math.LN2 / 10;                             // momentum half-life ≈ 10 days
+    const momentum = muM * (1 - Math.exp(-lambda * days)) / lambda;
+    const rsi = c.rsi == null ? 50 : c.rsi;
+    const reversion = (-((rsi - 50) / 50) * 0.10) * (1 - Math.exp(-days / 14)); // overbought ↓, oversold ↑
+    let cum = momentum + reversion;                           // neutral (zero) long-run drift
+    const capUp = days <= 5 ? 0.45 : days <= 30 ? 1.0 : days <= 90 ? 2.0 : 4.0;
+    const capDn = days <= 5 ? -0.35 : days <= 30 ? -0.55 : days <= 90 ? -0.75 : -0.9;
+    cum = Math.max(Math.log(1 + capDn), Math.min(Math.log(1 + capUp), cum));
+    const base = P * Math.exp(cum);
+    const sig = Math.min(1.5, dailyVol(c) * Math.sqrt(days)); // band widens with √time
+    return {
+      base, low: Math.max(P * 0.02, base * Math.exp(-sig)), high: base * Math.exp(sig),
+      pct: (base / P - 1) * 100, conf: confLabel(sig),
+    };
+  }
+  function forecast(c, days) { return predict(c, days).base; }
   function predSentiment(c) {
     const bull = Math.max(0, Math.min(26, Math.round(13 + c.score * 2)));
     const label = c.score >= 3 ? 'Strong Bullish' : c.score >= 1 ? 'Bullish' : c.score > -1 ? 'Neutral' : c.score > -3 ? 'Bearish' : 'Strong Bearish';
@@ -886,14 +919,15 @@
     if (horizon) state.predHorizon = horizon;
     const body = $('#pred-body');
     if (!body) return;
-    const hz = PRED_HORIZONS.find((h) => h[0] === state.predHorizon) || PRED_HORIZONS[1];
-    const list = [...state.coins].slice(0, 250)
-      .sort((a, b) => (forecast(b, hz[2]) / b.price) - (forecast(a, hz[2]) / a.price))
-      .slice(0, 60);
+    // Default order: market cap (state.coins arrives mcap-sorted), majors first.
+    const list = [...state.coins].slice(0, 60);
     body.innerHTML = list.map((c, i) => {
       const cells = PRED_HORIZONS.map(([k, , d]) => {
-        const f = forecast(c, d), ch = (f / c.price - 1) * 100;
-        return `<td class="num ${k === state.predHorizon ? 'pred-active' : ''}">${fmtPrice(f)}<small class="${ch >= 0 ? 'pos' : 'neg'}"> ${ch >= 0 ? '+' : ''}${ch.toFixed(1)}%</small></td>`;
+        const pr = predict(c, d);
+        const active = k === state.predHorizon;
+        return `<td class="num ${active ? 'pred-active' : ''}" title="Likely range ${fmtPrice(pr.low)} – ${fmtPrice(pr.high)} · ${pr.conf} confidence">
+          ${fmtPrice(pr.base)}<small class="${pr.pct >= 0 ? 'pos' : 'neg'}"> ${pr.pct >= 0 ? '+' : ''}${pr.pct.toFixed(1)}%</small>
+          ${active ? `<span class="pred-range muted">${fmtPrice(pr.low)} – ${fmtPrice(pr.high)} · ${pr.conf}</span>` : ''}</td>`;
       }).join('');
       const s = predSentiment(c);
       return `<tr data-id="${c.id}">
@@ -1018,9 +1052,13 @@
       <div id="cp-chart" class="cp-chart"><div class="loading">Loading chart…</div></div>
       <h3 class="arb__deep-title">Price prediction</h3>
       <div class="pred-cards">${PRED_HORIZONS.map(([, lbl, d]) => {
-        const f = forecast(c, d), ch = (f / c.price - 1) * 100;
-        return `<div class="arb__stat"><span>${lbl}</span><b>${fmtPrice(f)}</b><small class="${ch >= 0 ? 'pos' : 'neg'}">${ch >= 0 ? '+' : ''}${ch.toFixed(1)}%</small></div>`;
+        const pr = predict(c, d);
+        return `<div class="arb__stat"><span>${lbl}</span><b>${fmtPrice(pr.base)}</b>
+          <small class="${pr.pct >= 0 ? 'pos' : 'neg'}">${pr.pct >= 0 ? '+' : ''}${pr.pct.toFixed(1)}%</small>
+          <small class="muted pred-range">${fmtPrice(pr.low)} – ${fmtPrice(pr.high)}</small>
+          <small class="muted">${pr.conf} confidence</small></div>`;
       }).join('')}</div>
+      <p class="muted pred-disclaim">Base estimate with a bear–bull range from each coin's own volatility. Estimates, not financial advice.</p>
       <div class="techsum">
         <div class="techsum__verdict">
           <span class="muted">Technical sentiment</span>
