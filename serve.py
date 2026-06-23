@@ -443,18 +443,28 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     url = f"http://{HOST}:{PORT}"
-    print("=" * 60)
-    print("  📈  OMNISCIENT TRADING AGENT — web interface")
-    print("=" * 60)
-    print(f"  Open in your browser:  {url}")
-    print("  (it should open automatically)")
-    print("  Press Ctrl+C in this window to stop.")
-    print("=" * 60)
+    # When auto-started at login (background, no console), skip the banner/browser.
+    quiet = ("--no-browser" in sys.argv or
+             os.environ.get("OMNI_NO_BROWSER", "").lower() in ("1", "true", "yes", "on"))
+    if not quiet:
+        print("=" * 60)
+        print("  📈  OMNISCIENT TRADING AGENT — web interface")
+        print("=" * 60)
+        print(f"  Open in your browser:  {url}")
+        print("  (it should open automatically)")
+        print("  Press Ctrl+C in this window to stop.")
+        print("=" * 60)
+        try:
+            threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+        except Exception:
+            pass
     try:
-        threading.Timer(1.0, lambda: webbrowser.open(url)).start()
-    except Exception:
-        pass
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+        server = ThreadingHTTPServer((HOST, PORT), Handler)
+    except OSError:
+        # Port already in use -> a server is already running. Nothing to do.
+        if not quiet:
+            print("A server is already running on this port. Nothing to start.")
+        return
     try:
         server.serve_forever()
     except KeyboardInterrupt:
