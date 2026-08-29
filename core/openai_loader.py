@@ -16,7 +16,7 @@ class OpenAIModelLoader:
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY is required when AI_PROVIDER=openai")
 
-        self.model_name = model_name or os.getenv("OPENAI_MODEL", "gpt-5")
+        self.model_name = model_name or os.getenv("OPENAI_MODEL", "gpt-5.6-sol")
         self.client = OpenAI(api_key=api_key)
 
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
