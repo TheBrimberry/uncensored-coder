@@ -362,6 +362,18 @@ A: Sì, è MIT License - completamente libero.
 
 ---
 
+## 🧪 Development & Tests
+
+The core logic ships with a fully offline test suite (the `ollama` client is
+mocked, so no server or model download is required):
+
+```bash
+pip install -r requirements.txt
+pytest tests/ -q
+```
+
+---
+
 **Made with 💀 by [BitJacker](https://github.com/BitJacker)**
 
 **Uncensored Coder** - Because code should be free 🔓

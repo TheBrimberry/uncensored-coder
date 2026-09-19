@@ -6,6 +6,23 @@ from rich.prompt import Prompt, Confirm
 from prompt_toolkit import prompt
 import re
 
+from core.model_loader import OllamaUnavailableError
+
+# Default file extension per supported language, used when saving generated code.
+LANG_EXTENSIONS = {
+    "python": "py",
+    "javascript": "js",
+    "typescript": "ts",
+    "java": "java",
+    "cpp": "cpp",
+    "rust": "rs",
+    "go": "go",
+    "html": "html",
+    "css": "css",
+    "sql": "sql",
+}
+
+
 class CLI:
     def __init__(self, generator):
         self.generator = generator
@@ -38,15 +55,17 @@ class CLI:
                     if not self.last_code:
                         self.console.print("[red]No code available to save.[/red]")
                         continue
-                    fname = user_input.split()[1] if len(user_input.split()) > 1 else "script.py"
+                    parts = user_input.split()
+                    if len(parts) > 1:
+                        fname = parts[1]
+                    else:
+                        ext = LANG_EXTENSIONS.get(self.last_lang, "txt")
+                        fname = f"script.{ext}"
                     path = self.generator.save_to_file(self.last_code, fname)
                     self.console.print(f"[green]💾 Saved to {path}[/green]")
                     continue
 
-                # Language detection logic
-                lang = "python"
-                for l in ["javascript", "java", "cpp", "html", "css", "sql", "rust", "go"]:
-                    if l in user_input.lower(): lang = l
+                lang = self._detect_language(user_input)
 
                 with Progress(SpinnerColumn(), TextColumn("{task.description}"), console=self.console) as prog:
                     prog.add_task(description="🤔 Generating...")
@@ -55,5 +74,25 @@ class CLI:
 
                 self.display_code(self.last_code, self.last_lang)
 
+            except OllamaUnavailableError as e:
+                self.console.print(f"[red]Ollama error: {e}[/red]")
             except Exception as e:
                 self.console.print(f"[red]Error: {e}[/red]")
+
+    @staticmethod
+    def _detect_language(user_input: str) -> str:
+        """Pick a target language from the request text.
+
+        Matches whole words and prefers the longest keyword so that
+        "javascript" is not clobbered by the substring "java".
+        """
+        text = user_input.lower()
+        candidates = [
+            "typescript", "javascript", "python", "java", "cpp",
+            "rust", "go", "html", "css", "sql",
+        ]
+        found = [c for c in candidates if re.search(rf"\b{re.escape(c)}\b", text)]
+        if not found:
+            return "python"
+        # Longest match wins (e.g. "javascript" over "java").
+        return max(found, key=len)

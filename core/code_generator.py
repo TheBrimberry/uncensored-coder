@@ -1,30 +1,32 @@
+"""
+Code generation orchestration.
+
+Author: JAZZYLYFE
+"""
+
 import os
 import re
 import logging
-from typing import Optional, Dict, Any
-from enum import Enum
-from .model_loader import ModelLoader
+from typing import Optional
+
+from .model_loader import ModelLoader, OllamaUnavailableError
 from .prompt_templates import PromptTemplates
 
-class SupportedLanguage(Enum):
-    PYTHON = "python"
-    JAVASCRIPT = "javascript"
-    TYPESCRIPT = "typescript"
-    JAVA = "java"
-    CPP = "cpp"
-    RUST = "rust"
-    GO = "go"
-    HTML = "html"
-    CSS = "css"
-    SQL = "sql"
+# Re-export so callers can catch it from a single module.
+__all__ = ["CodeGenerator", "OllamaUnavailableError"]
+
 
 class CodeGenerator:
-    def __init__(self, model: str = "deepseek-coder:6.7b", enable_logging: bool = True):
+    def __init__(self, model: str = "dolphin-llama3", enable_logging: bool = True):
         self.model_name = model
         self.logger = self._setup_logger(enable_logging)
         try:
             self.loader = ModelLoader(model)
             self.templates = PromptTemplates()
+        except OllamaUnavailableError:
+            # Let readiness errors bubble up untouched so the caller can show a
+            # precise, actionable message.
+            raise
         except Exception as e:
             raise RuntimeError(f"Initialization Error: {e}")
 
@@ -32,24 +34,33 @@ class CodeGenerator:
         logger = logging.getLogger(__name__)
         if enable and not logger.handlers:
             h = logging.StreamHandler()
-            h.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+            h.setFormatter(
+                logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            )
             logger.addHandler(h)
             logger.setLevel(logging.INFO)
         return logger
 
+    def ensure_ready(self) -> bool:
+        """Make sure the target model is available locally, pulling it if
+        needed. Raises OllamaUnavailableError with an actionable message when
+        the server is unreachable."""
+        self.logger.info("Checking model availability: %s", self.model_name)
+        return self.loader.pull_model()
+
     def _clean_code(self, text: str) -> str:
-        """Removes markdown blocks ``` and returns raw code only"""
+        """Removes markdown code fences and returns raw code only."""
         pattern = r"```(?:\w+)?\n(.*?)\n```"
         match = re.search(pattern, text, re.DOTALL)
         return match.group(1).strip() if match else text.strip()
 
     def generate(self, user_request: str, language: str = "python") -> str:
-        # Optimization: We use English templates for global compatibility
+        # Send the system mandate as a real system message (previously it was
+        # concatenated into the user prompt, weakening its effect on the model).
         system_p = self.templates.get_system_prompt(language)
         user_p = self.templates.get_user_prompt(user_request, language)
-        
-        full_prompt = f"{system_p}\n\n{user_p}"
-        raw_code = self.loader.generate(full_prompt)
+
+        raw_code = self.loader.generate(user_p, system_prompt=system_p)
         return self._clean_code(raw_code)
 
     def save_to_file(self, code: str, filename: str) -> str:
