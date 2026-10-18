@@ -1,0 +1,16 @@
+symbol,side,entry,exit,qty,strategy,entry_time
+EURUSD,long,1.0850,1.0910,10000,london_breakout,2026-05-01 08:00
+EURUSD,short,1.0920,1.0960,10000,london_breakout,2026-05-02 08:30
+GBPUSD,long,1.2700,1.2640,8000,ny_reversal,2026-05-04 13:00
+BTC/USDT,long,61000,63500,0.1,trend_follow,2026-05-05 00:00
+BTC/USDT,long,64000,62500,0.1,trend_follow,2026-05-06 00:00
+EURUSD,long,1.0880,1.0940,10000,london_breakout,2026-05-07 08:00
+AAPL,long,188.50,193.20,50,swing,2026-05-08 14:30
+AAPL,short,195.00,191.00,50,swing,2026-05-11 14:30
+GBPUSD,short,1.2680,1.2720,8000,ny_reversal,2026-05-12 13:00
+ETH/USDT,long,2900,3050,1,trend_follow,2026-05-13 00:00
+EURUSD,short,1.0950,1.0990,10000,london_breakout,2026-05-14 08:30
+GBPUSD,long,1.2660,1.2600,8000,ny_reversal,2026-05-15 13:00
+BTC/USDT,short,65000,63000,0.1,trend_follow,2026-05-18 00:00
+AAPL,long,190.00,196.50,50,swing,2026-05-19 14:30
+ETH/USDT,short,3100,3180,1,trend_follow,2026-05-20 00:00

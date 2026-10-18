@@ -331,6 +331,159 @@ Se ti piace il progetto, lascia una ⭐ su GitHub!
 
 ---
 
+## 📈 Omniscient Trading Agent
+
+A multi-asset trading agent lives in the [`trading/`](trading/) package. It fuses
+the best ideas from the open-source trading ecosystem (**freqtrade, ccxt,
+backtrader, vectorbt, OpenBB, qlib, FinRL, pandas-ta, TradeLocker, MetaTrader5,
+Alpaca, Interactive Brokers** and more) into one reasoning engine driven by the
+local LLM.
+
+> ⚠️ **Honest by design.** No software can guarantee a market prediction.
+> Forecasts are *probabilistic* (direction probability + expected-move band +
+> confidence), never promises. This is analysis/education, not financial advice.
+
+### Capabilities
+
+- **Any symbol, any market** — Forex ("4X"), crypto, stocks, ETFs, indices, futures.
+- **Technical analysis** — EMA/SMA, RSI, MACD, Bollinger, ATR, Stochastic, Supertrend (pure-python, no hard deps).
+- **Strategy ensemble** — trend-following, mean-reversion, breakout, momentum, Supertrend, blended into a net bias.
+- **Probabilistic forecasting** — P(up), expected return band scaled by volatility & horizon, with confidence.
+- **Backtesting** — event-driven, no-lookahead harness with win rate, profit factor, max drawdown & Sharpe.
+- **Optimization & walk-forward** — grid-search strategy params, then anchored out-of-sample walk-forward that flags overfit (FRAGILE) vs robust strategies.
+- **Risk-managed plans** — ATR-normalized entry/stop/target, position sizing from your equity & risk %.
+- **News & events** — headline sentiment + macro/crypto catalyst calendar (FOMC, CPI, earnings, halvings, unlocks).
+- **Brokers** — uniform interface over **TradeLocker, MetaTrader5, ccxt, Alpaca** — **paper/dry-run by default**.
+- **Account guardian** — hard risk firewall: every order needs a stop, with per-trade / daily-loss / drawdown circuit breakers so you **don't blow up the account**.
+- **Performance review** — ingest your past trades (CSV/JSON/broker/backtest) and get a diagnosis of *what's actually losing you money* with concrete fixes.
+- **Live bot improvement** — auto-tune bot **parameters** (walk-forward-gated) *and* propose **code edits** to the strategy file (backed up, dry-run by default).
+- **Co-pilot insights** — highlight market structure, key levels, candle/divergence patterns and plain-language insights side by side.
+- **Deep knowledge corpus** — a dense, curated quant body of knowledge (microstructure, smart-money, session edges, risk-of-ruin math, options/crypto edges, backtest traps) that you can **grow by ingesting your own notes and sources**.
+- **Knowledge base** — queryable catalogue of real trading repos + strategy families + non-negotiable risk principles.
+
+### Usage
+
+```bash
+# Full LLM-narrated trading read (needs Ollama running)
+python trade.py BTC/USDT
+
+# Computed quantitative report only (works fully offline, no Ollama)
+python trade.py AAPL --no-llm
+
+# Intraday + custom forecast horizon + account sizing
+python trade.py EURUSD --timeframe 1h --forecast 10 --equity 25000 --risk 0.5
+
+# Ask a specific question
+python trade.py ETH/USDT -q "is this a good breakout entry?"
+
+# Backtest a strategy on historical bars (default strategy: ensemble)
+python trade.py BTC/USDT --backtest ma_crossover
+
+# Grid-search a strategy's parameters (metric: calmar|profit_factor|sharpe|...)
+python trade.py BTC/USDT --optimize ma_crossover --metric sharpe
+
+# Out-of-sample walk-forward validation (FRAGILE vs ROBUST verdict)
+python trade.py AAPL --walk-forward rsi_reversion
+
+# Co-pilot: highlight patterns, key levels and insights
+python trade.py BTC/USDT --insights
+
+# Review your past trading data and get a diagnosis (CSV or JSON)
+python trade.py --review examples/sample_trades.csv
+
+# Retrieve deep quant knowledge on any topic
+python trade.py --learn "crypto funding rate squeeze"
+
+# Teach the agent your own research (file or folder); persists to ~/.trading_corpus.json
+python trade.py --ingest ./my_trading_notes/
+
+# Tune a bot's parameters (dry-run; add --apply to commit robust improvements)
+python trade.py --tune mybot.json --metric calmar
+python trade.py --tune mybot.json --apply
+
+# Broker connectivity smoke test (demo accounts; safe no-op without creds)
+python scripts/broker_smoke_test.py
+
+# Interactive loop  (type 'SYMBOL ? question', 'kb crypto', or 'exit')
+python trade.py --interactive
+
+# Dump the trading knowledge base
+python trade.py --knowledge crypto
+```
+
+### Programmatic API
+
+```python
+from trading import TradingAgent
+
+agent = TradingAgent(account_equity=10_000, risk_pct=1.0)
+
+report = agent.analyze("BTC/USDT")     # deterministic, no LLM needed
+print(report.to_text())
+
+print(agent.forecast("AAPL").summary())          # probabilistic outlook
+print(agent.trade_plan("EURUSD").summary())      # risk-managed plan
+print(agent.backtest("BTC/USDT", "ensemble").summary())  # historical validation
+print(agent.optimize("BTC/USDT", "ma_crossover").summary())      # grid search
+print(agent.walk_forward("AAPL", "rsi_reversion").summary())     # OOS robustness
+print(agent.ask("ETH/USDT", "swing or scalp?"))  # LLM-narrated read
+
+# Co-pilot, performance review, account guardian
+print(agent.insights("BTC/USDT").to_text())                      # patterns + levels
+print(agent.review_performance("examples/sample_trades.csv").to_text())
+print(agent.execute_plan(agent.trade_plan("AAPL")))   # guardian-protected paper order
+
+# Improve a bot live — parameters (walk-forward gated) AND code (LLM, backed up)
+from trading import BotConfig
+bot = BotConfig(name="fx", symbol="EURUSD", strategy="ma_crossover",
+                params={"fast": 50, "slow": 200}, code_path="my_strategy.py")
+proposal = agent.tune_bot(bot, metric="calmar", apply=True, path="fx.json")
+print(proposal.summary())
+print(agent.improve_bot_code(bot, performance_source="examples/sample_trades.csv").summary())
+
+# Teach it your own knowledge, then retrieve it
+agent.ingest_knowledge(file="my_notes.md", save_path="corpus.json")
+print(agent.learn("london open breakout"))
+
+# Execution is PAPER by default; live needs live=True + real credentials.
+plan = agent.trade_plan("BTC/USDT")
+print(agent.execute_plan(plan, broker="paper"))
+```
+
+### Optional dependencies
+
+The agent runs offline out of the box using a synthetic-data fallback (clearly
+flagged). For **real** market data and execution, uncomment the relevant lines in
+[`requirements.txt`](requirements.txt) — e.g. `yfinance` (stocks/fx **and crypto**
+via the `BTC-USD` feed), `ccxt` (crypto exchanges), `MetaTrader5` / `tradelocker`
+/ `alpaca-py` (brokers). Data resolution falls through gracefully:
+**crypto → ccxt exchange → Yahoo crypto feed → synthetic**, so you still get real
+prices even when an exchange API is unreachable.
+
+### Live brokers (optional)
+
+Execution defaults to **paper/dry-run**. To smoke-test a real *demo* account,
+export credentials and run the connect-only script (it never places a live order
+unless you pass `--place-test-order`):
+
+```bash
+# MetaTrader 5
+export MT5_LOGIN=... MT5_PASSWORD=... MT5_SERVER=...
+# TradeLocker
+export TRADELOCKER_USERNAME=... TRADELOCKER_PASSWORD=... TRADELOCKER_SERVER=...
+
+python scripts/broker_smoke_test.py            # connect + list positions only
+python scripts/broker_smoke_test.py --place-test-order --symbol EURUSD --qty 0.01
+```
+
+Run the tests (all offline, no keys required):
+
+```bash
+python -m pytest tests/test_trading.py -q
+```
+
+---
+
 ## 🔮 Roadmap
 
 - [ ] Interfaccia web (GUI)

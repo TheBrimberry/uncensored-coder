@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body data-theme="dark">
+  <header>
+    <span class="logo">📈</span>
+    <div class="hwrap">
+      <div class="title">Omniscient Trading Agent</div>
+      <div class="sub">your AI trading co-pilot</div>
+    </div>
+    <button id="themeBtn" class="icon" title="Toggle theme">◐</button>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="signals">Signals</button>
+    <button class="tab" data-tab="chat">Chat</button>
+    <button class="tab" data-tab="analyze">Analyze</button>
+    <button class="tab" data-tab="watch">Watch</button>
+    <button class="tab" data-tab="journal">Journal</button>
+    <button class="tab" data-tab="settings">⚙</button>
+  </nav>
+
+  <!-- SIGNALS -->
+  <section id="tab-signals" class="panel active">
+    <div class="rowbar">
+      <span class="muted">Live signals for your watchlist</span>
+      <button id="refreshSignals" class="mini">↻ Scan now</button>
+    </div>
+    <div id="signalCards" class="cards">Loading…</div>
+  </section>
+
+  <!-- CHAT -->
+  <section id="tab-chat" class="panel">
+    <div class="rowbar">
+      <span class="muted">Chat with your trading co-pilot (needs Ollama)</span>
+      <button id="chatReset" class="mini">Reset</button>
+    </div>
+    <div class="chatctx">
+      <input id="chatSymbol" placeholder="optional symbol for context (e.g. BTC/USDT)">
+    </div>
+    <div id="chatLog" class="chatlog"></div>
+    <div class="chatbar">
+      <input id="chatInput" class="chatinput" placeholder="Ask anything… e.g. is gold a buy here?">
+      <button id="chatSend" class="b-blue">Send</button>
+    </div>
+  </section>
+
+  <!-- ANALYZE -->
+  <section id="tab-analyze" class="panel">
+    <div class="controls">
+      <input id="symbol" class="symbol" value="BTC/USDT" placeholder="BTC/USDT, AAPL, EURUSD">
+      <select id="timeframe">
+        <option>1d</option><option>1w</option><option>4h</option>
+        <option>1h</option><option>15m</option><option>5m</option>
+      </select>
+    </div>
+    <input id="question" class="question" placeholder="Question for Ask AI / Knowledge (optional)">
+    <div class="buttons">
+      <button data-act="signal"   class="b-green">★ Signal</button>
+      <button data-act="ask"      class="b-blue">Ask AI 🤖</button>
+      <button data-act="analyze">Analyze</button>
+      <button data-act="regime">Regime</button>
+      <button data-act="mtf">Multi-TF</button>
+      <button data-act="insights">Co-Pilot</button>
+      <button data-act="plan">Trade Plan</button>
+      <button data-act="backtest">Backtest</button>
+      <button data-act="knowledge" class="b-ghost">Knowledge</button>
+    </div>
+    <pre id="out" class="out">Type a symbol and click a button.</pre>
+  </section>
+
+  <!-- WATCHLIST -->
+  <section id="tab-watch" class="panel">
+    <h4>Watchlist symbols</h4>
+    <div class="addrow">
+      <input id="newSymbol" placeholder="add symbol e.g. XAUUSD">
+      <button id="addSymbol" class="mini">Add</button>
+    </div>
+    <ul id="symbolList" class="list"></ul>
+
+    <h4>Price alerts</h4>
+    <div class="addrow">
+      <input id="alSymbol" placeholder="symbol">
+      <select id="alDir"><option value="above">above</option><option value="below">below</option></select>
+      <input id="alPrice" placeholder="price" style="width:74px">
+      <button id="addAlert" class="mini">Add</button>
+    </div>
+    <ul id="alertList" class="list"></ul>
+  </section>
+
+  <!-- JOURNAL -->
+  <section id="tab-journal" class="panel">
+    <div class="rowbar">
+      <span class="muted">Signal history (local)</span>
+      <span>
+        <button id="exportCsv" class="mini">Export CSV</button>
+        <button id="clearJournal" class="mini danger">Clear</button>
+      </span>
+    </div>
+    <div id="journalList" class="cards">No entries yet.</div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="panel">
+    <div class="serverbox">
+      <div class="rowbar">
+        <span class="muted">Agent server</span>
+        <span id="srvPill" class="pill">checking…</span>
+      </div>
+      <button id="startServer" class="save" style="background:var(--green);margin-top:6px">▶ Start server</button>
+      <div class="tip" id="startHint">One-click start needs the helper installed once
+        (run <b>install_server_button.bat</b> from your agent folder). Without it,
+        just double-click <b>Start Trading Agent.bat</b>.</div>
+    </div>
+    <label>Agent server URL</label>
+    <input id="serverUrl" value="http://127.0.0.1:8765">
+    <div class="row2">
+      <div><label>Equity ($)</label><input id="equity" value="10000"></div>
+      <div><label>Risk (%)</label><input id="risk" value="1"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="watchEnabled"> Background watch (desktop alerts)</label>
+    <div class="row2">
+      <div><label>Scan every (min)</label><input id="watchMins" value="15"></div>
+      <div><label>Min conviction</label><input id="minConviction" value="0.45"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="sound"> Sound on alerts</label>
+    <button id="saveSettings" class="save">Save settings</button>
+    <div class="tip">Tip: press <b>Ctrl+Shift+T</b> for the live side panel.</div>
+  </section>
+
+  <div id="status" class="status">● checking agent…</div>
+
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
